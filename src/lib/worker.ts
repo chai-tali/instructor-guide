@@ -69,6 +69,7 @@ export async function processJob(jobId: string): Promise<void> {
 
 export async function processSlide(slideId: string, jobId: string): Promise<void> {
   const slide = await prisma.slide.findUniqueOrThrow({ where: { id: slideId } });
+  const isFirstAttempt = slide.status === "pending";
 
   try {
     await prisma.slide.update({ where: { id: slideId }, data: { status: "processing" } });
@@ -99,8 +100,10 @@ export async function processSlide(slideId: string, jobId: string): Promise<void
     });
   }
 
-  await prisma.job.update({
-    where: { id: jobId },
-    data: { completedSlides: { increment: 1 } },
-  });
+  if (isFirstAttempt) {
+    await prisma.job.update({
+      where: { id: jobId },
+      data: { completedSlides: { increment: 1 } },
+    });
+  }
 }

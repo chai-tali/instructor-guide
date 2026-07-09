@@ -11,25 +11,20 @@ export async function convertPptxToSlideImages(
 ): Promise<number> {
   await fs.mkdir(outputDir, { recursive: true });
 
-  await execFileAsync("soffice", [
-    "--headless",
-    "--convert-to",
-    "pdf",
-    "--outdir",
-    outputDir,
-    pptxPath,
-  ]);
+  await execFileAsync(
+    "soffice",
+    ["--headless", "--convert-to", "pdf", "--outdir", outputDir, pptxPath],
+    { timeout: 120_000 }
+  );
 
   const pptxBasename = path.basename(pptxPath, path.extname(pptxPath));
   const pdfPath = path.join(outputDir, `${pptxBasename}.pdf`);
 
-  await execFileAsync("pdftoppm", [
-    "-png",
-    "-r",
-    "150",
-    pdfPath,
-    path.join(outputDir, "slide"),
-  ]);
+  await execFileAsync(
+    "pdftoppm",
+    ["-png", "-r", "150", pdfPath, path.join(outputDir, "slide")],
+    { timeout: 120_000 }
+  );
 
   const files = (await fs.readdir(outputDir)).filter(
     (f) => f.startsWith("slide") && f.endsWith(".png")

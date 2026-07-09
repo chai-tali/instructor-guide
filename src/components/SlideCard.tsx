@@ -1,4 +1,5 @@
 import type { GuideSection } from "@/types/guide";
+import { RetrySlideButton } from "@/components/RetrySlideButton";
 
 const SECTION_TITLES: Record<string, string> = {
   trainerPointer: "Trainer Pointer",
@@ -13,11 +14,13 @@ const SECTION_TITLES: Record<string, string> = {
 };
 
 export function SlideCard({
+  id,
   index,
   imagePath,
   status,
   sections,
 }: {
+  id: string;
   index: number;
   imagePath: string;
   status: string;
@@ -27,7 +30,12 @@ export function SlideCard({
     <section>
       <h2>Slide {index + 1}</h2>
       <img src={imagePath} alt={`Slide ${index + 1}`} width={480} />
-      {status === "failed" && <p role="alert">This slide failed to generate.</p>}
+      {status === "failed" && (
+        <>
+          <p role="alert">This slide failed to generate.</p>
+          <RetrySlideButton slideId={id} />
+        </>
+      )}
       {sections.map((section) => (
         <div key={section.type}>
           <h3>{section.title || SECTION_TITLES[section.type] || section.type}</h3>
