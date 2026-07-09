@@ -9,9 +9,9 @@
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "pretest": "cross-env DATABASE_URL=file:./prisma/test.db prisma db push --skip-generate",
-    "test": "cross-env DATABASE_URL=file:./prisma/test.db vitest run",
-    "test:watch": "cross-env DATABASE_URL=file:./prisma/test.db vitest"
+    "pretest": "cross-env DATABASE_URL=file:./test.db prisma db push --skip-generate",
+    "test": "cross-env DATABASE_URL=file:./test.db vitest run",
+    "test:watch": "cross-env DATABASE_URL=file:./test.db vitest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
