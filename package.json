@@ -35,6 +35,6 @@
     "pptxgenjs": "^4.0.1",
     "prisma": "^6.19.3",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^1.6.1"
   }
 }
