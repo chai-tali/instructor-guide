@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
 import { analyzeSlide, generateGuide } from "@/lib/gemini";
-import { STORAGE_DIR } from "@/lib/storage";
+import { getStorageDir } from "@/lib/storage";
 import type { SlideIntent, SectionKey } from "@/types/guide";
 
 const jobQueue: string[] = [];
@@ -27,12 +27,7 @@ async function drainQueue(): Promise<void> {
 }
 
 export async function processJob(jobId: string): Promise<void> {
-  // Read STORAGE_DIR live rather than relying solely on the module-load-time
-  // constant: storage.ts freezes STORAGE_DIR the moment it's imported, so any
-  // later override of process.env.STORAGE_DIR (e.g. per-test tmp dirs) would
-  // otherwise be invisible here.
-  const storageDir = process.env.STORAGE_DIR ?? STORAGE_DIR;
-  const jobDir = path.join(storageDir, jobId);
+  const jobDir = path.join(getStorageDir(), jobId);
   const pptxPath = path.join(jobDir, "original.pptx");
   const slidesDir = path.join(jobDir, "slides");
 
