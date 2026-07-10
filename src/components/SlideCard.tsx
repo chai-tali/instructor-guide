@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 import type { GuideSection } from "@/types/guide";
 import { RetrySlideButton } from "@/components/RetrySlideButton";
 
@@ -33,19 +34,21 @@ export function SlideCard({
       {status === "failed" && (
         <>
           <p role="alert">This slide failed to generate.</p>
-          <RetrySlideButton slideId={id} />
+          <div className="no-print">
+            <RetrySlideButton slideId={id} />
+          </div>
         </>
       )}
       {sections.map((section) => (
         <div key={section.type}>
           <h3>{section.title || SECTION_TITLES[section.type] || section.type}</h3>
-          {section.content && <p>{section.content}</p>}
+          {section.content && <ReactMarkdown>{section.content}</ReactMarkdown>}
           {section.items && (
             <ul>
               {section.items.map((item, i) => (
                 <li key={i}>
                   {item.question !== "bullet" && <strong>{item.question}: </strong>}
-                  {item.answer}
+                  <ReactMarkdown>{item.answer}</ReactMarkdown>
                 </li>
               ))}
             </ul>

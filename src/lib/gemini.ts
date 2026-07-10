@@ -4,7 +4,7 @@ import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
 import type { SlideAnalysis, InstructorGuide, SlideIntent, SectionKey } from "@/types/guide";
 
-const MODEL_NAME = "gemini-1.5-flash";
+const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
 
 function getClient(): GoogleGenerativeAI {
   const apiKey = process.env.GEMINI_API_KEY;

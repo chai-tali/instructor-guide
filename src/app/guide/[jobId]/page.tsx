@@ -11,7 +11,9 @@ export default async function GuidePage({ params }: { params: { jobId: string } 
   return (
     <main>
       <h1>Instructor Guide</h1>
-      <a href={`/api/jobs/${params.jobId}/export`}>Export PDF</a>
+      <a className="no-print" href={`/api/jobs/${params.jobId}/export`}>
+        Export PDF
+      </a>
       {slides.map((slide) => (
         <SlideCard
           key={slide.id}
