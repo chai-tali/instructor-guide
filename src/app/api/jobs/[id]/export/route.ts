@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { buildInstructorGuideDocx } from "@/lib/docx-export";
+import { buildInstructorGuideDocx, stripPptxExtension } from "@/lib/docx-export";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const job = await db.job.findUnique({ where: { id: params.id } });
+
+  if (!job) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404 });
+  }
+
   const slides = await db.slide.findMany({
     where: { jobId: params.id },
     orderBy: { index: "asc" },
@@ -15,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  const buffer = await buildInstructorGuideDocx(slides);
+  const buffer = await buildInstructorGuideDocx(slides, stripPptxExtension(job.filename));
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {

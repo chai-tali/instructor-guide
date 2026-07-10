@@ -8,6 +8,10 @@ import type { MarkdownBlock } from "@/lib/markdown-lite";
 
 const MAX_IMAGE_WIDTH = 600;
 
+export function stripPptxExtension(filename: string): string {
+  return filename.replace(/\.pptx$/i, "");
+}
+
 function readPngDimensions(buffer: Buffer): { width: number; height: number } {
   const width = buffer.readUInt32BE(16);
   const height = buffer.readUInt32BE(20);
@@ -96,13 +100,20 @@ async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
   return paragraphs;
 }
 
-export async function buildInstructorGuideDocx(slides: SlideRow[]): Promise<Buffer> {
+export async function buildInstructorGuideDocx(slides: SlideRow[], title: string): Promise<Buffer> {
   const slideParagraphs = await Promise.all(slides.map(slideToParagraphs));
 
   const doc = new Document({
+    title,
     sections: [
       {
-        children: slideParagraphs.flat(),
+        children: [
+          new Paragraph({
+            heading: HeadingLevel.TITLE,
+            children: [new TextRun(title)],
+          }),
+          ...slideParagraphs.flat(),
+        ],
       },
     ],
   });

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { GET } from "@/app/api/jobs/[id]/export/route";
 import { NextRequest } from "next/server";
 import path from "node:path";
+import JSZip from "jszip";
 
 describe("GET /api/jobs/:id/export", () => {
   beforeEach(async () => {
@@ -21,8 +22,17 @@ describe("GET /api/jobs/:id/export", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns a downloadable docx for a job with slides", async () => {
-    const job = await db.job.create({ filename: "deck.pptx", status: "done" });
+  it("returns 404 for a job that exists but has no slides yet", async () => {
+    const job = await db.job.create({ filename: "deck.pptx", status: "processing" });
+
+    const req = new NextRequest(`http://localhost/api/jobs/${job.id}/export`);
+    const res = await GET(req, { params: { id: job.id } });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns a downloadable docx titled after the uploaded filename", async () => {
+    const job = await db.job.create({ filename: "My Deck.pptx", status: "done" });
     await db.slide.create({
       jobId: job.id,
       index: 0,
@@ -45,5 +55,10 @@ describe("GET /api/jobs/:id/export", () => {
 
     const buffer = Buffer.from(await res.arrayBuffer());
     expect(buffer.subarray(0, 2).toString("latin1")).toBe("PK");
+
+    const zip = await JSZip.loadAsync(buffer);
+    const documentXml = await zip.file("word/document.xml")!.async("string");
+    expect(documentXml).toContain("My Deck");
+    expect(documentXml).not.toContain("My Deck.pptx");
   });
 });
