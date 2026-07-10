@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chromium } from "playwright";
+import { db } from "@/lib/db";
+import { buildInstructorGuideDocx } from "@/lib/docx-export";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const browser = await chromium.launch();
+  const slides = await db.slide.findMany({
+    where: { jobId: params.id },
+    orderBy: { index: "asc" },
+  });
 
-  try {
-    const page = await browser.newPage();
-    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-    await page.goto(`${baseUrl}/guide/${params.id}`, { waitUntil: "networkidle" });
-    const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="instructor-guide-${params.id}.pdf"`,
-      },
-    });
-  } finally {
-    await browser.close();
+  if (slides.length === 0) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
+
+  const buffer = await buildInstructorGuideDocx(slides);
+
+  return new NextResponse(new Uint8Array(buffer), {
+    headers: {
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Disposition": `attachment; filename="instructor-guide-${params.id}.docx"`,
+    },
+  });
 }
