@@ -7,19 +7,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prisma:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "pretest": "cross-env DATABASE_URL=file:./test.db prisma db push --skip-generate",
-    "test": "cross-env DATABASE_URL=file:./test.db vitest run",
-    "test:watch": "cross-env DATABASE_URL=file:./test.db vitest"
+    "db:migrate": "node scripts/migrate.mjs",
+    "pretest": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/instructor_guide_test node scripts/migrate.mjs",
+    "test": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/instructor_guide_test vitest run",
+    "test:watch": "cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/instructor_guide_test vitest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^6.19.3",
     "fast-xml-parser": "^5.9.3",
     "jszip": "^3.10.1",
     "next": "14.2.35",
     "p-limit": "^7.3.0",
+    "pg": "^8.22.0",
     "playwright": "^1.61.1",
     "react": "^18",
     "react-dom": "^18",
@@ -28,13 +27,13 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "@types/pg": "^8.11.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "cross-env": "^10.1.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "pptxgenjs": "^4.0.1",
-    "prisma": "^6.19.3",
     "typescript": "^5",
     "vitest": "^1.6.1"
   }
