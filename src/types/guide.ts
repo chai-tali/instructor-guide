@@ -55,3 +55,15 @@ export interface GuideSection {
 export interface InstructorGuide {
   sections: GuideSection[];
 }
+
+export const SECTION_TITLES: Record<string, string> = {
+  trainerPointer: "Trainer Pointer",
+  whyItMatters: "Why It Matters",
+  mentalModel: "Mental Model",
+  bestPractices: "Best Practices",
+  commonPitfalls: "Common Pitfalls",
+  realWorldImplementation: "Real World Implementation",
+  howThisFits: "How This Fits",
+  faq: "FAQ",
+  interviewQuestions: "Interview Questions",
+};
