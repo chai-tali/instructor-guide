@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { SlideCard } from "@/components/SlideCard";
 import type { GuideSection } from "@/types/guide";
 
 export default async function GuidePage({ params }: { params: { jobId: string } }) {
-  const slides = await prisma.slide.findMany({
+  const slides = await db.slide.findMany({
     where: { jobId: params.jobId },
     orderBy: { index: "asc" },
   });

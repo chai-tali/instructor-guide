@@ -9,21 +9,21 @@ vi.mock("@/lib/worker", () => ({
 }));
 
 import { enqueueJob } from "@/lib/worker";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { POST } from "@/app/api/upload/route";
 
 describe("POST /api/upload", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    await prisma.job.deleteMany();
+    await db.job.deleteMany();
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "ig-upload-"));
     process.env.STORAGE_DIR = tmpDir;
     vi.mocked(enqueueJob).mockReset();
   });
 
   afterAll(async () => {
-    await prisma.job.deleteMany();
+    await db.job.deleteMany();
   });
 
   it("rejects non-pptx files", async () => {
@@ -52,7 +52,7 @@ describe("POST /api/upload", () => {
     expect(res.status).toBe(200);
     expect(body.jobId).toBeTruthy();
 
-    const job = await prisma.job.findUniqueOrThrow({ where: { id: body.jobId } });
+    const job = await db.job.findUniqueOrThrow({ where: { id: body.jobId } });
     expect(job.filename).toBe("deck.pptx");
     expect(job.status).toBe("pending");
 

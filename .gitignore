@@ -37,6 +37,4 @@ next-env.d.ts
 
 # Instructor Guide app
 storage/
-prisma/*.db
-prisma/*.db-journal
 .env

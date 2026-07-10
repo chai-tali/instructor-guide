@@ -18,14 +18,14 @@ import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
 import { analyzeSlide, generateGuide } from "@/lib/gemini";
 import { processJob } from "@/lib/worker";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 
 describe("processJob", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    await prisma.slide.deleteMany();
-    await prisma.job.deleteMany();
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "ig-test-"));
     process.env.STORAGE_DIR = tmpDir;
     vi.mocked(convertPptxToSlideImages).mockReset();
@@ -35,12 +35,12 @@ describe("processJob", () => {
   });
 
   afterAll(async () => {
-    await prisma.slide.deleteMany();
-    await prisma.job.deleteMany();
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
   });
 
   it("processes every slide and marks the job done", async () => {
-    const job = await prisma.job.create({ data: { filename: "deck.pptx", status: "pending" } });
+    const job = await db.job.create({ filename: "deck.pptx", status: "pending" });
     const slidesDir = path.join(tmpDir, job.id, "slides");
     await fs.mkdir(slidesDir, { recursive: true });
     await fs.writeFile(path.join(slidesDir, "1.png"), Buffer.from("fake-png"));
@@ -59,11 +59,11 @@ describe("processJob", () => {
 
     await processJob(job.id);
 
-    const updated = await prisma.job.findUniqueOrThrow({ where: { id: job.id } });
+    const updated = await db.job.findUniqueOrThrow({ where: { id: job.id } });
     expect(updated.status).toBe("done");
     expect(updated.completedSlides).toBe(2);
 
-    const slides = await prisma.slide.findMany({
+    const slides = await db.slide.findMany({
       where: { jobId: job.id },
       orderBy: { index: "asc" },
     });
@@ -75,7 +75,7 @@ describe("processJob", () => {
   });
 
   it("marks only the failing slide as failed and still completes the job", async () => {
-    const job = await prisma.job.create({ data: { filename: "deck.pptx", status: "pending" } });
+    const job = await db.job.create({ filename: "deck.pptx", status: "pending" });
     const slidesDir = path.join(tmpDir, job.id, "slides");
     await fs.mkdir(slidesDir, { recursive: true });
     await fs.writeFile(path.join(slidesDir, "1.png"), Buffer.from("fake-png"));
@@ -96,10 +96,10 @@ describe("processJob", () => {
 
     await processJob(job.id);
 
-    const updated = await prisma.job.findUniqueOrThrow({ where: { id: job.id } });
+    const updated = await db.job.findUniqueOrThrow({ where: { id: job.id } });
     expect(updated.status).toBe("done");
 
-    const slides = await prisma.slide.findMany({
+    const slides = await db.slide.findMany({
       where: { jobId: job.id },
       orderBy: { index: "asc" },
     });

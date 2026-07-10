@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { GET } from "@/app/api/jobs/[id]/route";
 import { NextRequest } from "next/server";
 
 describe("GET /api/jobs/:id", () => {
   beforeEach(async () => {
-    await prisma.slide.deleteMany();
-    await prisma.job.deleteMany();
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
   });
 
   afterAll(async () => {
-    await prisma.slide.deleteMany();
-    await prisma.job.deleteMany();
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
   });
 
   it("returns 404 for an unknown job", async () => {
@@ -21,8 +21,8 @@ describe("GET /api/jobs/:id", () => {
   });
 
   it("returns job status fields", async () => {
-    const job = await prisma.job.create({
-      data: { filename: "deck.pptx", status: "processing", totalSlides: 5, completedSlides: 2 },
+    const job = await db.job.create({
+      filename: "deck.pptx", status: "processing", totalSlides: 5, completedSlides: 2,
     });
 
     const req = new NextRequest(`http://localhost/api/jobs/${job.id}`);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { enqueueJob } from "@/lib/worker";
 import { getStorageDir } from "@/lib/storage";
 
@@ -21,9 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File exceeds 50MB limit" }, { status: 400 });
   }
 
-  const job = await prisma.job.create({
-    data: { filename: file.name, status: "pending" },
-  });
+  const job = await db.job.create({ filename: file.name, status: "pending" });
 
   const jobDir = path.join(getStorageDir(), job.id);
   await fs.mkdir(jobDir, { recursive: true });

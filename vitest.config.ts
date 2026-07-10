@@ -6,11 +6,11 @@ export default defineConfig({
     environment: "node",
     testTimeout: 30000,
     hookTimeout: 30000,
-    // Test files share a single SQLite database file and several suites
+    // Test files share a single Postgres database and several suites
     // (e.g. worker + upload) issue blanket deleteMany() calls against the
     // same tables. Running files concurrently races those deletes against
     // each other's FK-referenced rows (Job/Slide), causing intermittent
-    // P2003 failures. Serialize file execution to keep the shared DB
+    // failures. Serialize file execution to keep the shared DB
     // consistent across suites.
     fileParallelism: false,
   },

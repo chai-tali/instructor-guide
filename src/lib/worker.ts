@@ -1,7 +1,7 @@
 import pLimit from "p-limit";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
 import { analyzeSlide, generateGuide } from "@/lib/gemini";
@@ -32,23 +32,21 @@ export async function processJob(jobId: string): Promise<void> {
   const slidesDir = path.join(jobDir, "slides");
 
   try {
-    await prisma.job.update({ where: { id: jobId }, data: { status: "processing" } });
+    await db.job.update({ where: { id: jobId }, data: { status: "processing" } });
 
     const slideCount = await convertPptxToSlideImages(pptxPath, slidesDir);
     const texts = await extractSlideTexts(pptxPath);
 
-    await prisma.job.update({ where: { id: jobId }, data: { totalSlides: slideCount } });
+    await db.job.update({ where: { id: jobId }, data: { totalSlides: slideCount } });
 
     const slideRecords = await Promise.all(
       Array.from({ length: slideCount }, (_, index) =>
-        prisma.slide.create({
-          data: {
-            jobId,
-            index,
-            imagePath: path.join(slidesDir, `${index + 1}.png`),
-            extractedText: texts[index] ?? "",
-            status: "pending",
-          },
+        db.slide.create({
+          jobId,
+          index,
+          imagePath: path.join(slidesDir, `${index + 1}.png`),
+          extractedText: texts[index] ?? "",
+          status: "pending",
         })
       )
     );
@@ -58,9 +56,9 @@ export async function processJob(jobId: string): Promise<void> {
       slideRecords.map((slide) => limit(() => processSlide(slide.id, jobId)))
     );
 
-    await prisma.job.update({ where: { id: jobId }, data: { status: "done" } });
+    await db.job.update({ where: { id: jobId }, data: { status: "done" } });
   } catch (err) {
-    await prisma.job.update({
+    await db.job.update({
       where: { id: jobId },
       data: { status: "failed", error: (err as Error).message },
     });
@@ -68,11 +66,11 @@ export async function processJob(jobId: string): Promise<void> {
 }
 
 export async function processSlide(slideId: string, jobId: string): Promise<void> {
-  const slide = await prisma.slide.findUniqueOrThrow({ where: { id: slideId } });
+  const slide = await db.slide.findUniqueOrThrow({ where: { id: slideId } });
   const isFirstAttempt = slide.status === "pending";
 
   try {
-    await prisma.slide.update({ where: { id: slideId }, data: { status: "processing" } });
+    await db.slide.update({ where: { id: slideId }, data: { status: "processing" } });
 
     const imageBase64 = (await fs.readFile(slide.imagePath)).toString("base64");
     const analysis = await analyzeSlide(imageBase64, slide.extractedText);
@@ -83,7 +81,7 @@ export async function processSlide(slideId: string, jobId: string): Promise<void
       analysis.recommendedSections as SectionKey[]
     );
 
-    await prisma.slide.update({
+    await db.slide.update({
       where: { id: slideId },
       data: {
         slideIntent: analysis.slideIntent,
@@ -94,14 +92,14 @@ export async function processSlide(slideId: string, jobId: string): Promise<void
       },
     });
   } catch (err) {
-    await prisma.slide.update({
+    await db.slide.update({
       where: { id: slideId },
       data: { status: "failed", error: (err as Error).message },
     });
   }
 
   if (isFirstAttempt) {
-    await prisma.job.update({
+    await db.job.update({
       where: { id: jobId },
       data: { completedSlides: { increment: 1 } },
     });

@@ -30,7 +30,7 @@ vi.mock("@/lib/gemini", () => ({
 }));
 
 import { processJob } from "@/lib/worker";
-import { prisma } from "@/lib/db";
+import { db } from "@/lib/db";
 
 async function hasSoffice(): Promise<boolean> {
   try {
@@ -50,8 +50,8 @@ describe("full pipeline", () => {
   });
 
   afterAll(async () => {
-    await prisma.slide.deleteMany();
-    await prisma.job.deleteMany();
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
   });
 
   it("takes a fixture deck from upload through completed slides", async () => {
@@ -60,7 +60,7 @@ describe("full pipeline", () => {
       return;
     }
 
-    const job = await prisma.job.create({ data: { filename: "sample.pptx", status: "pending" } });
+    const job = await db.job.create({ filename: "sample.pptx", status: "pending" });
     const jobDir = path.join(tmpDir, job.id);
     await fs.mkdir(jobDir, { recursive: true });
     await fs.copyFile(
@@ -70,11 +70,11 @@ describe("full pipeline", () => {
 
     await processJob(job.id);
 
-    const updated = await prisma.job.findUniqueOrThrow({ where: { id: job.id } });
+    const updated = await db.job.findUniqueOrThrow({ where: { id: job.id } });
     expect(updated.status).toBe("done");
     expect(updated.totalSlides).toBe(3);
 
-    const slides = await prisma.slide.findMany({
+    const slides = await db.slide.findMany({
       where: { jobId: job.id },
       orderBy: { index: "asc" },
     });
