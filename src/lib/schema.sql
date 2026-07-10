@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS "Slide" (
     "extractedText" TEXT NOT NULL,
     "slideIntent" TEXT,
     "recommendedSections" TEXT,
-    "confidence" REAL,
+    "confidence" DOUBLE PRECISION,
     "sections" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "error" TEXT,

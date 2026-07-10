@@ -1,7 +1,16 @@
 import { Pool } from "pg";
 import { randomUUID } from "node:crypto";
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+declare global {
+  // eslint-disable-next-line no-var
+  var __pgPool: Pool | undefined;
+}
+
+export const pool = globalThis.__pgPool ?? new Pool({ connectionString: process.env.DATABASE_URL });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.__pgPool = pool;
+}
 
 export interface JobRow {
   id: string;
@@ -78,6 +87,7 @@ export const db = {
       data: Record<string, unknown>;
     }): Promise<JobRow> {
       const { clause, values } = buildSetClause(args.data, 1);
+      if (!clause) throw new Error("update() requires at least one field to set");
       const result = await pool.query<JobRow>(
         `UPDATE "Job" SET ${clause}, "updatedAt" = now() WHERE id = $${values.length + 1} RETURNING *`,
         [...values, args.where.id]
@@ -143,6 +153,7 @@ export const db = {
       data: Record<string, unknown>;
     }): Promise<SlideRow> {
       const { clause, values } = buildSetClause(args.data, 1);
+      if (!clause) throw new Error("update() requires at least one field to set");
       const result = await pool.query<SlideRow>(
         `UPDATE "Slide" SET ${clause} WHERE id = $${values.length + 1} RETURNING *`,
         [...values, args.where.id]
