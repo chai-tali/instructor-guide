@@ -166,7 +166,7 @@ describe("buildInstructorGuideDocx front matter", () => {
     expect(xml).not.toContain("Key Points");
   });
 
-  it("renders the Relevance of this Slide heading for a howThisFits section", async () => {
+  it("renders the Relevance of the Slide heading for a howThisFits section", async () => {
     const buffer = await buildInstructorGuideDocx(fakeJob(), [
       fakeSlide({
         sections: JSON.stringify([
@@ -175,7 +175,7 @@ describe("buildInstructorGuideDocx front matter", () => {
       }),
     ]);
     const xml = await documentXmlOf(buffer);
-    expect(xml).toContain("Relevance of this Slide");
+    expect(xml).toContain("Relevance of the Slide");
     expect(xml).not.toContain("How This Fits");
   });
 });

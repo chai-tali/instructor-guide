@@ -61,8 +61,8 @@ export const SECTION_TITLES: Record<string, string> = {
   bestPractices: "Best Practices",
   commonPitfalls: "Common Pitfalls",
   realWorldImplementation: "Real World Implementation",
-  howThisFits: "Relevance of this Slide",
-  faq: "FAQ",
+  howThisFits: "Relevance of the Slide",
+  faq: "Frequently Asked Questions by Learners",
 };
 
 export interface DeckAnalysis {
