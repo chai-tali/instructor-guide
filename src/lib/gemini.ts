@@ -61,17 +61,17 @@ trainerPointer: Explain how the trainer should present this slide. Use action-or
 
 mentalModel: Provide ONE memorable analogy. Only if a natural analogy exists. Do not force analogies.
 
-bestPractices: Provide 1-3 delivery tips for the trainer. Focus on teaching technique.
+bestPractices: Provide 1-3 delivery tips for the trainer. Focus on teaching technique. Format each tip as its own markdown bullet line starting with "- ", one tip per line. Never combine multiple tips into a single sentence or paragraph.
 
-commonPitfalls: Provide 1-3 learner misconceptions. These are mistakes learners commonly make while understanding this topic. NOT trainer mistakes.
+commonPitfalls: Provide 1-3 learner misconceptions. These are mistakes learners commonly make while understanding this topic. NOT trainer mistakes. Format each misconception as its own markdown bullet line starting with "- ", one per line. Never combine multiple misconceptions into a single sentence or paragraph.
 
-realWorldImplementation: Provide 1-3 practical examples of how this concept is used in industry. Only if grounded in the slide.
+realWorldImplementation: Provide 1-3 practical examples of how this concept is used in industry. Only if grounded in the slide. Format each example as its own markdown bullet line starting with "- ", one per line. Never combine multiple examples into a single sentence or paragraph.
 
 howThisFits: Explain how this concept connects to the surrounding learning journey. Avoid generic statements like "This comes next."
 
 faq: Generate 2-5 realistic learner questions. Each must include a question and an answer. Do not invent advanced questions.
 
-General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Return ONLY valid JSON.`;
+General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/tips/pitfalls/examples, each one MUST be on its own line, formatted as a markdown bullet ("- " or "* " prefix) — never merge multiple points into one sentence or paragraph. Return ONLY valid JSON.`;
 
 const analyzerResponseSchema: Schema = {
   type: SchemaType.OBJECT,
