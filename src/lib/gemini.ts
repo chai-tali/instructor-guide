@@ -3,7 +3,14 @@ import { z } from "zod";
 import type { Schema } from "@google/generative-ai";
 import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
-import type { SlideAnalysis, InstructorGuide, SlideIntent, SectionKey, DeckAnalysis } from "@/types/guide";
+import type {
+  SlideAnalysis,
+  InstructorGuide,
+  GuideSection,
+  SlideIntent,
+  SectionKey,
+  DeckAnalysis,
+} from "@/types/guide";
 
 const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
 
@@ -11,6 +18,25 @@ function getClient(): GoogleGenerativeAI {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
   return new GoogleGenerativeAI(apiKey);
+}
+
+// Gemini frequently uses em dashes regardless of prompt instructions; strip them
+// deterministically as a safety net rather than relying on the prompt alone.
+function stripEmDash(text: string): string {
+  return text.replace(/\s*—\s*/g, ", ");
+}
+
+function sanitizeSection(section: GuideSection): GuideSection {
+  return {
+    ...section,
+    title: stripEmDash(section.title),
+    content: section.content !== undefined ? stripEmDash(section.content) : undefined,
+    keyPoints: section.keyPoints?.map(stripEmDash),
+    items: section.items?.map((item) => ({
+      question: stripEmDash(item.question),
+      answer: stripEmDash(item.answer),
+    })),
+  };
 }
 
 const ANALYZER_PROMPT = `You are an expert Instructional Designer.
@@ -76,7 +102,7 @@ faq: Generate 2-5 realistic learner questions. Each must include a question and 
 
 keyTakeaways: The slide recaps what participants learned/covered in the session. Explain how the trainer should walk participants through the specific takeaways actually listed on the slide — never invent generic filler. Maximum 120 words.
 
-General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/tips/pitfalls/examples, each one MUST be on its own line, formatted as a markdown bullet ("- " or "* " prefix) — never merge multiple points into one sentence or paragraph. Return ONLY valid JSON.`;
+General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/tips/pitfalls/examples, each one MUST be on its own line, formatted as a markdown bullet ("- " or "* " prefix) — never merge multiple points into one sentence or paragraph. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
 
 const analyzerResponseSchema: Schema = {
   type: SchemaType.OBJECT,
@@ -179,7 +205,8 @@ export async function generateGuide(
   ]);
 
   const parsed = JSON.parse(result.response.text());
-  return instructorGuideSchema.parse(parsed);
+  const guide = instructorGuideSchema.parse(parsed);
+  return { sections: guide.sections.map(sanitizeSection) };
 }
 
 const DECK_ANALYZER_PROMPT = `You are an expert Instructional Designer.
@@ -193,6 +220,8 @@ Your job is to analyze the WHOLE deck (not one slide) and extract three things:
 2. duration: An explicit statement of the total workshop/session duration or time schedule (e.g. "2 hours", "9:30 AM to 5:00 PM", "Day 1 and Day 2"), ONLY if a slide explicitly states one. If no slide explicitly states a duration or schedule, return null. NEVER estimate or infer a duration from slide count or content.
 
 3. learningObjectives: Generate 3 to 5 learning objectives for the ENTIRE deck (not per-slide). Each objective MUST start with an imperative, base-form verb such as Understand, Apply, Identify, Explain, Analyze, Evaluate, Describe, Create, or Demonstrate. NEVER start an objective with a gerund/"-ing" form (do not write "Understanding..." or "Learning..."). Ground every objective in what the deck actually teaches — never invent generic filler.
+
+NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead.
 
 Return ONLY valid JSON. No explanation. No markdown.`;
 
@@ -232,12 +261,19 @@ export async function analyzeDeck(slideTexts: string[]): Promise<DeckAnalysis> {
   // workshopTitle and duration are validated independently of learningObjectives
   // so that a good title/duration extraction is never discarded just because the
   // objectives array came back out of the expected 3-5 item range.
-  const workshopTitle = z.string().nullable().parse(parsed.workshopTitle);
-  const duration = z.string().nullable().parse(parsed.duration);
+  const workshopTitleRaw = z.string().nullable().parse(parsed.workshopTitle);
+  const durationRaw = z.string().nullable().parse(parsed.duration);
+  const workshopTitle = workshopTitleRaw !== null ? stripEmDash(workshopTitleRaw) : null;
+  const duration = durationRaw !== null ? stripEmDash(durationRaw) : null;
 
   let learningObjectives: string[];
   try {
-    learningObjectives = z.array(z.string()).min(3).max(5).parse(parsed.learningObjectives);
+    learningObjectives = z
+      .array(z.string())
+      .min(3)
+      .max(5)
+      .parse(parsed.learningObjectives)
+      .map(stripEmDash);
   } catch {
     learningObjectives = [];
   }

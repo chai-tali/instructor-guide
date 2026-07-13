@@ -96,6 +96,32 @@ describe("generateGuide", () => {
       "Establishes the agenda.",
     ]);
   });
+
+  it("strips em dashes from content, keyPoints, and items", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              {
+                type: "trainerPointer",
+                title: "Trainer Pointer",
+                content: "Explain the concept—clearly and concisely.",
+                keyPoints: ["Builds trust—fast.", "Keeps focus—on the task."],
+                items: [{ question: "Why—this order?", answer: "Because it flows—naturally." }],
+              },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateGuide("base64image", "text", "WELCOME", ["trainerPointer"]);
+
+    const section = result.sections[0];
+    expect(section.content).toBe("Explain the concept, clearly and concisely.");
+    expect(section.keyPoints).toEqual(["Builds trust, fast.", "Keeps focus, on the task."]);
+    expect(section.items).toEqual([{ question: "Why, this order?", answer: "Because it flows, naturally." }]);
+  });
 });
 
 describe("analyzeDeck", () => {
@@ -188,5 +214,32 @@ describe("analyzeDeck", () => {
     expect(result.workshopTitle).toBe("AI in Practice");
     expect(result.duration).toBeNull();
     expect(result.learningObjectives).toEqual([]);
+  });
+
+  it("strips em dashes from workshopTitle, duration, and learningObjectives", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            workshopTitle: "AI in Practice—Session 1",
+            duration: "2 hours—approx",
+            learningObjectives: [
+              "Understand prompting—the fundamentals",
+              "Apply structured extraction—to filings",
+              "Identify hallucination risks—in outputs",
+            ],
+          }),
+      },
+    });
+
+    const result = await analyzeDeck(["text"]);
+
+    expect(result.workshopTitle).toBe("AI in Practice, Session 1");
+    expect(result.duration).toBe("2 hours, approx");
+    expect(result.learningObjectives).toEqual([
+      "Understand prompting, the fundamentals",
+      "Apply structured extraction, to filings",
+      "Identify hallucination risks, in outputs",
+    ]);
   });
 });
