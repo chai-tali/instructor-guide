@@ -52,6 +52,27 @@ describe("instructorGuideSchema", () => {
       instructorGuideSchema.parse({ sections: [{ title: "Missing type" }] })
     ).toThrow();
   });
+
+  it("accepts a trainerPointer section with keyPoints", () => {
+    const result = instructorGuideSchema.parse({
+      sections: [
+        {
+          type: "trainerPointer",
+          title: "Trainer Pointer",
+          content: "Welcome everyone.",
+          keyPoints: ["This sets the tone.", "It builds rapport."],
+        },
+      ],
+    });
+    expect(result.sections[0].keyPoints).toEqual(["This sets the tone.", "It builds rapport."]);
+  });
+
+  it("accepts a section without keyPoints", () => {
+    const result = instructorGuideSchema.parse({
+      sections: [{ type: "mentalModel", title: "Mental Model", content: "Think of it like..." }],
+    });
+    expect(result.sections[0].keyPoints).toBeUndefined();
+  });
 });
 
 describe("deckAnalysisSchema", () => {

@@ -71,6 +71,31 @@ describe("generateGuide", () => {
     expect(result.sections).toHaveLength(1);
     expect(result.sections[0].type).toBe("trainerPointer");
   });
+
+  it("includes keyPoints on a trainerPointer response", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              {
+                type: "trainerPointer",
+                title: "Trainer Pointer",
+                content: "Welcome the class.",
+                keyPoints: ["Sets a collaborative tone.", "Establishes the agenda."],
+              },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateGuide("base64image", "text", "WELCOME", ["trainerPointer"]);
+
+    expect(result.sections[0].keyPoints).toEqual([
+      "Sets a collaborative tone.",
+      "Establishes the agenda.",
+    ]);
+  });
 });
 
 describe("analyzeDeck", () => {

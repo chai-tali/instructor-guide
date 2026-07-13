@@ -17,6 +17,7 @@ export const guideSectionSchema = z.object({
   title: z.string(),
   content: z.string().optional(),
   items: z.array(guideSectionItemSchema).optional(),
+  keyPoints: z.array(z.string()).optional(),
 });
 
 export const instructorGuideSchema = z.object({
