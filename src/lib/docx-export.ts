@@ -1,10 +1,28 @@
 import fs from "node:fs/promises";
-import { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel } from "docx";
-import type { SlideRow } from "@/lib/db";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  ImageRun,
+  HeadingLevel,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+} from "docx";
+import type { JobRow, SlideRow } from "@/lib/db";
 import { SECTION_TITLES } from "@/types/guide";
 import type { GuideSection } from "@/types/guide";
 import { parseMarkdownLite } from "@/lib/markdown-lite";
 import type { MarkdownBlock } from "@/lib/markdown-lite";
+import {
+  TRAINER_GUIDELINES_DOS,
+  TRAINER_GUIDELINES_DONTS,
+  MATERIAL_REQUIRED_ITEMS,
+  TRAINING_AIDS_ITEMS,
+  TRAINING_VIDEO_ITEMS,
+} from "@/lib/static-guide-content";
 
 const MAX_IMAGE_WIDTH = 600;
 
@@ -30,6 +48,16 @@ function markdownBlocksToParagraphs(blocks: MarkdownBlock[]): Paragraph[] {
       new Paragraph({
         bullet: block.type === "bullet" ? { level: 0 } : undefined,
         children: block.runs.map((run) => new TextRun({ text: run.text, bold: run.bold })),
+      })
+  );
+}
+
+function bulletParagraphs(items: string[]): Paragraph[] {
+  return items.map(
+    (item) =>
+      new Paragraph({
+        bullet: { level: 0 },
+        children: [new TextRun(item)],
       })
   );
 }
@@ -100,20 +128,70 @@ async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
   return paragraphs;
 }
 
-export async function buildInstructorGuideDocx(slides: SlideRow[], title: string): Promise<Buffer> {
+function twoColumnCell(text: string, bold = false): TableCell {
+  return new TableCell({
+    width: { size: 50, type: WidthType.PERCENTAGE },
+    children: [new Paragraph({ children: [new TextRun({ text, bold })] })],
+  });
+}
+
+function trainerGuidelinesTable(): Table {
+  const rowCount = Math.max(TRAINER_GUIDELINES_DOS.length, TRAINER_GUIDELINES_DONTS.length);
+
+  const headerRow = new TableRow({
+    children: [twoColumnCell("Do's", true), twoColumnCell("Don'ts", true)],
+  });
+
+  const bodyRows = Array.from(
+    { length: rowCount },
+    (_, i) =>
+      new TableRow({
+        children: [
+          twoColumnCell(TRAINER_GUIDELINES_DOS[i] ?? ""),
+          twoColumnCell(TRAINER_GUIDELINES_DONTS[i] ?? ""),
+        ],
+      })
+  );
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [headerRow, ...bodyRows],
+  });
+}
+
+function heading(text: string): Paragraph {
+  return new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(text)] });
+}
+
+function frontMatter(job: JobRow): (Paragraph | Table)[] {
+  const title = job.workshopTitle ?? stripPptxExtension(job.filename);
+  const learningObjectives: string[] = job.learningObjectives ? JSON.parse(job.learningObjectives) : [];
+
+  return [
+    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(title)] }),
+    new Paragraph({ children: [new TextRun(`Duration: ${job.duration ?? ""}`)] }),
+    heading("Learning Objectives"),
+    ...bulletParagraphs(learningObjectives),
+    heading("Trainer Guidelines"),
+    trainerGuidelinesTable(),
+    heading("Material Required for the Workshop"),
+    ...bulletParagraphs(MATERIAL_REQUIRED_ITEMS),
+    heading("Training Aids for the Workshop"),
+    ...bulletParagraphs(TRAINING_AIDS_ITEMS),
+    heading("Training videos and important links"),
+    ...bulletParagraphs(TRAINING_VIDEO_ITEMS),
+    heading("Session Guide"),
+  ];
+}
+
+export async function buildInstructorGuideDocx(job: JobRow, slides: SlideRow[]): Promise<Buffer> {
   const slideParagraphs = await Promise.all(slides.map(slideToParagraphs));
 
   const doc = new Document({
-    title,
+    title: job.workshopTitle ?? stripPptxExtension(job.filename),
     sections: [
       {
-        children: [
-          new Paragraph({
-            heading: HeadingLevel.TITLE,
-            children: [new TextRun(title)],
-          }),
-          ...slideParagraphs.flat(),
-        ],
+        children: [...frontMatter(job), ...slideParagraphs.flat()],
       },
     ],
   });
