@@ -38,3 +38,4 @@ next-env.d.ts
 # Instructor Guide app
 storage/
 .env
+/output
