@@ -26,7 +26,7 @@ You will receive:
 STEP 1: Determine the slide's instructional intent. Choose exactly ONE value from the allowed slideIntent enum.
 
 STEP 2: Determine which instructor guide sections are genuinely useful. Available sections are:
-trainerPointer, whyItMatters, mentalModel, bestPractices, commonPitfalls, realWorldImplementation, howThisFits, faq, interviewQuestions.
+trainerPointer, mentalModel, bestPractices, commonPitfalls, realWorldImplementation, howThisFits, faq.
 
 Only recommend sections that genuinely improve teaching. Do NOT recommend sections simply because they exist.
 
@@ -36,14 +36,12 @@ AGENDA -> trainerPointer
 SECTION_DIVIDER -> trainerPointer
 THANK_YOU -> (no sections)
 SUMMARY -> trainerPointer
-CONCEPT -> trainerPointer, whyItMatters, commonPitfalls, faq
-ARCHITECTURE -> trainerPointer, whyItMatters, mentalModel, commonPitfalls, faq, interviewQuestions
-PROCESS -> trainerPointer, whyItMatters, commonPitfalls, faq, interviewQuestions
-CODE -> trainerPointer, bestPractices, commonPitfalls, faq, interviewQuestions
+CONCEPT -> trainerPointer, commonPitfalls, faq
+ARCHITECTURE -> trainerPointer, mentalModel, commonPitfalls, faq
+PROCESS -> trainerPointer, commonPitfalls, faq
+CODE -> trainerPointer, bestPractices, commonPitfalls, faq
 DEMO -> trainerPointer, bestPractices, commonPitfalls, faq
 EXERCISE -> trainerPointer, bestPractices, faq
-
-Interview Questions Rule: Recommend interviewQuestions ONLY if the slide teaches concepts that are commonly asked in technical or professional interviews. Do NOT recommend interviewQuestions for Welcome, Agenda, Section Divider, Summary, Thank You, or administrative slides.
 
 FAQ Rule: Recommend FAQ only if learners are reasonably expected to ask clarification questions about the concept.
 
@@ -59,9 +57,7 @@ Your task is ONLY to generate the instructor guide sections listed in recommende
 
 Section Rules:
 
-trainerPointer: Explain how the trainer should present this slide. Use action-oriented language. Maximum 120 words.
-
-whyItMatters: 1-3 concise bullets. Explain why this concept matters. Ground every point in the slide.
+trainerPointer: Explain how the trainer should present this slide. Use action-oriented language. Maximum 120 words. Also generate keyPoints: exactly 2-3 concise bullets explaining why this concept matters to learners. Ground every point in the slide — never invent generic filler.
 
 mentalModel: Provide ONE memorable analogy. Only if a natural analogy exists. Do not force analogies.
 
@@ -74,8 +70,6 @@ realWorldImplementation: Provide 1-3 practical examples of how this concept is u
 howThisFits: Explain how this concept connects to the surrounding learning journey. Avoid generic statements like "This comes next."
 
 faq: Generate 2-5 realistic learner questions. Each must include a question and an answer. Do not invent advanced questions.
-
-interviewQuestions: Generate 2-4 interview questions ONLY if requested. These should represent realistic interview questions asked by hiring managers about the concepts taught on this slide. Do not generate trivia. Test conceptual understanding.
 
 General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Return ONLY valid JSON.`;
 
@@ -121,6 +115,10 @@ const generatorResponseSchema: Schema = {
               },
               required: ["question", "answer"],
             },
+          },
+          keyPoints: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING },
           },
         },
         required: ["type", "title"],
