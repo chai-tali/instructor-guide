@@ -14,7 +14,7 @@ vi.mock("@google/generative-ai", () => {
 
 process.env.GEMINI_API_KEY = "test-key";
 
-import { analyzeSlide, generateGuide } from "@/lib/gemini";
+import { analyzeSlide, generateGuide, analyzeDeck } from "@/lib/gemini";
 
 describe("analyzeSlide", () => {
   beforeEach(() => {
@@ -70,5 +70,60 @@ describe("generateGuide", () => {
 
     expect(result.sections).toHaveLength(1);
     expect(result.sections[0].type).toBe("trainerPointer");
+  });
+});
+
+describe("analyzeDeck", () => {
+  beforeEach(() => {
+    generateContentMock.mockReset();
+  });
+
+  it("parses a valid deck analysis response", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            workshopTitle: "AI in Practice",
+            duration: "4:00 PM to 6:30 PM",
+            learningObjectives: [
+              "Understand the five-block prompt architecture",
+              "Apply structured prompts to extract financial data",
+              "Identify common LLM hallucination risks",
+            ],
+          }),
+      },
+    });
+
+    const result = await analyzeDeck(["Welcome slide text", "Agenda slide text"]);
+
+    expect(result.workshopTitle).toBe("AI in Practice");
+    expect(result.duration).toBe("4:00 PM to 6:30 PM");
+    expect(result.learningObjectives).toHaveLength(3);
+  });
+
+  it("passes through null duration and workshopTitle unchanged", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            workshopTitle: null,
+            duration: null,
+            learningObjectives: ["Understand X", "Apply Y", "Identify Z"],
+          }),
+      },
+    });
+
+    const result = await analyzeDeck(["Some slide text with no stated schedule"]);
+
+    expect(result.workshopTitle).toBeNull();
+    expect(result.duration).toBeNull();
+  });
+
+  it("throws when the response does not match the schema", async () => {
+    generateContentMock.mockResolvedValue({
+      response: { text: () => JSON.stringify({ workshopTitle: "X" }) },
+    });
+
+    await expect(analyzeDeck(["text"])).rejects.toThrow();
   });
 });

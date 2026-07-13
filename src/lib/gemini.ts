@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { Schema } from "@google/generative-ai";
-import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
-import type { SlideAnalysis, InstructorGuide, SlideIntent, SectionKey } from "@/types/guide";
+import type { SlideAnalysis, InstructorGuide, SlideIntent, SectionKey, DeckAnalysis } from "@/types/guide";
 
 const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
 
@@ -176,4 +176,53 @@ export async function generateGuide(
 
   const parsed = JSON.parse(result.response.text());
   return instructorGuideSchema.parse(parsed);
+}
+
+const DECK_ANALYZER_PROMPT = `You are an expert Instructional Designer.
+
+You will receive the OCR-extracted text of every slide in a training deck, in order.
+
+Your job is to analyze the WHOLE deck (not one slide) and extract three things:
+
+1. workshopTitle: The workshop/session title, ONLY if a slide explicitly states one (e.g. on a title or welcome slide). If no slide explicitly states a title, return null. Do not invent or infer a title from the general topic.
+
+2. duration: An explicit statement of the total workshop/session duration or time schedule (e.g. "2 hours", "9:30 AM to 5:00 PM", "Day 1 and Day 2"), ONLY if a slide explicitly states one. If no slide explicitly states a duration or schedule, return null. NEVER estimate or infer a duration from slide count or content.
+
+3. learningObjectives: Generate 3 to 5 learning objectives for the ENTIRE deck (not per-slide). Each objective MUST start with an imperative, base-form verb such as Understand, Apply, Identify, Explain, Analyze, Evaluate, Describe, Create, or Demonstrate. NEVER start an objective with a gerund/"-ing" form (do not write "Understanding..." or "Learning..."). Ground every objective in what the deck actually teaches — never invent generic filler.
+
+Return ONLY valid JSON. No explanation. No markdown.`;
+
+const deckAnalysisResponseSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    workshopTitle: { type: SchemaType.STRING, nullable: true },
+    duration: { type: SchemaType.STRING, nullable: true },
+    learningObjectives: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+    },
+  },
+  required: ["workshopTitle", "duration", "learningObjectives"],
+};
+
+export async function analyzeDeck(slideTexts: string[]): Promise<DeckAnalysis> {
+  const model = getClient().getGenerativeModel({
+    model: MODEL_NAME,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: deckAnalysisResponseSchema,
+    },
+  });
+
+  const combinedText = slideTexts
+    .map((text, index) => `Slide ${index + 1}:\n${text}`)
+    .join("\n\n");
+
+  const result = await model.generateContent([
+    { text: DECK_ANALYZER_PROMPT },
+    { text: `Deck OCR text:\n${combinedText}` },
+  ]);
+
+  const parsed = JSON.parse(result.response.text());
+  return deckAnalysisSchema.parse(parsed);
 }
