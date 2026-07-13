@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { buildInstructorGuideDocx, stripPptxExtension } from "@/lib/docx-export";
+import { buildInstructorGuideDocx } from "@/lib/docx-export";
 
 export async function GET(
   _req: NextRequest,
@@ -21,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "Job not found" }, { status: 404 });
   }
 
-  const buffer = await buildInstructorGuideDocx(slides, stripPptxExtension(job.filename));
+  const buffer = await buildInstructorGuideDocx(job, slides);
 
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
