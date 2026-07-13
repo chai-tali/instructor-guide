@@ -39,17 +39,33 @@ function fakeSlide(overrides: Partial<SlideRow> = {}): SlideRow {
   };
 }
 
-async function documentXmlOf(buffer: Buffer): Promise<string> {
-  const zip = await JSZip.loadAsync(buffer);
-  const xml = await zip.file("word/document.xml")!.async("string");
-  // docx escapes apostrophes/quotes as XML entities in text nodes; decode them
-  // so assertions can match against the plain-text source strings.
+function decodeXmlEntities(xml: string): string {
   return xml
     .replace(/&apos;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">");
+}
+
+async function documentXmlOf(buffer: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file("word/document.xml")!.async("string");
+  // docx escapes apostrophes/quotes as XML entities in text nodes; decode them
+  // so assertions can match against the plain-text source strings.
+  return decodeXmlEntities(xml);
+}
+
+async function headerXmlOf(buffer: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file("word/header1.xml")!.async("string");
+  return decodeXmlEntities(xml);
+}
+
+async function footerXmlOf(buffer: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(buffer);
+  const xml = await zip.file("word/footer1.xml")!.async("string");
+  return decodeXmlEntities(xml);
 }
 
 describe("stripPptxExtension", () => {
@@ -194,5 +210,38 @@ describe("buildInstructorGuideDocx front matter", () => {
     const xml = await documentXmlOf(buffer);
     expect(xml).toContain("Key Takeaways");
     expect(xml).toContain("Walk participants through each takeaway listed on the slide.");
+  });
+});
+
+describe("buildInstructorGuideDocx header and footer", () => {
+  it("renders the logo right-aligned in the header", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [fakeSlide()]);
+    const xml = await headerXmlOf(buffer);
+    expect(xml).toContain('<w:jc w:val="right"/>');
+    expect(xml).toContain("<w:drawing>");
+  });
+
+  it("embeds the logo image as media in the docx", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [fakeSlide()]);
+    const zip = await JSZip.loadAsync(buffer);
+    const mediaFiles = Object.keys(zip.files).filter((name) => name.startsWith("word/media/"));
+    expect(mediaFiles.length).toBeGreaterThan(0);
+  });
+
+  it("renders 'All rights reserved © NIIT Ltd.' on the left of the footer", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [fakeSlide()]);
+    const xml = await footerXmlOf(buffer);
+    expect(xml).toContain("All rights reserved © NIIT Ltd.");
+  });
+
+  it("renders a right-aligned page/total-page number field in the footer", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [fakeSlide()]);
+    const xml = await footerXmlOf(buffer);
+    expect(xml).toContain('<w:tab w:val="right"');
+    expect(xml).toContain("<w:instrText xml:space=\"preserve\">PAGE</w:instrText>");
+    expect(xml).toContain("<w:instrText xml:space=\"preserve\">NUMPAGES</w:instrText>");
+    const rightsIndex = xml.indexOf("All rights reserved");
+    const pageFieldIndex = xml.indexOf("PAGE</w:instrText>");
+    expect(pageFieldIndex).toBeGreaterThan(rightsIndex);
   });
 });

@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import {
   Document,
   Packer,
@@ -10,6 +11,13 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  Header,
+  Footer,
+  PageNumber,
+  Tab,
+  TabStopType,
+  TabStopPosition,
+  AlignmentType,
 } from "docx";
 import type { JobRow, SlideRow } from "@/lib/db";
 import { SECTION_TITLES } from "@/types/guide";
@@ -25,6 +33,9 @@ import {
 } from "@/lib/static-guide-content";
 
 const MAX_IMAGE_WIDTH = 600;
+const LOGO_PATH = path.join(process.cwd(), "logo", "niit.png");
+const LOGO_HEADER_WIDTH = 120;
+const FOOTER_TEXT = "All rights reserved © NIIT Ltd.";
 
 export function stripPptxExtension(filename: string): string {
   return filename.replace(/\.pptx$/i, "");
@@ -36,10 +47,14 @@ function readPngDimensions(buffer: Buffer): { width: number; height: number } {
   return { width, height };
 }
 
-function scaledDimensions(width: number, height: number): { width: number; height: number } {
-  if (width <= MAX_IMAGE_WIDTH) return { width, height };
-  const scale = MAX_IMAGE_WIDTH / width;
-  return { width: MAX_IMAGE_WIDTH, height: Math.round(height * scale) };
+function scaledDimensions(
+  width: number,
+  height: number,
+  maxWidth: number = MAX_IMAGE_WIDTH
+): { width: number; height: number } {
+  if (width <= maxWidth) return { width, height };
+  const scale = maxWidth / width;
+  return { width: maxWidth, height: Math.round(height * scale) };
 }
 
 function markdownBlocksToParagraphs(blocks: MarkdownBlock[]): Paragraph[] {
@@ -194,13 +209,54 @@ function frontMatter(job: JobRow): (Paragraph | Table)[] {
   ];
 }
 
+async function buildHeader(): Promise<Header> {
+  const logoBuffer = await fs.readFile(LOGO_PATH);
+  const { width: rawWidth, height: rawHeight } = readPngDimensions(logoBuffer);
+  const { width, height } = scaledDimensions(rawWidth, rawHeight, LOGO_HEADER_WIDTH);
+
+  return new Header({
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        children: [
+          new ImageRun({
+            data: logoBuffer,
+            transformation: { width, height },
+            type: "png",
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function buildFooter(): Footer {
+  return new Footer({
+    children: [
+      new Paragraph({
+        tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+        children: [
+          new TextRun(FOOTER_TEXT),
+          new TextRun({ children: [new Tab(), PageNumber.CURRENT, "/", PageNumber.TOTAL_PAGES] }),
+        ],
+      }),
+    ],
+  });
+}
+
 export async function buildInstructorGuideDocx(job: JobRow, slides: SlideRow[]): Promise<Buffer> {
-  const slideParagraphs = await Promise.all(slides.map(slideToParagraphs));
+  const [slideParagraphs, header] = await Promise.all([
+    Promise.all(slides.map(slideToParagraphs)),
+    buildHeader(),
+  ]);
+  const footer = buildFooter();
 
   const doc = new Document({
     title: job.workshopTitle ?? stripPptxExtension(job.filename),
     sections: [
       {
+        headers: { default: header },
+        footers: { default: footer },
         children: [...frontMatter(job), ...slideParagraphs.flat()],
       },
     ],
