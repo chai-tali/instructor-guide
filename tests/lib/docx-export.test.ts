@@ -134,4 +134,48 @@ describe("buildInstructorGuideDocx front matter", () => {
     expect(sessionGuideIndex).toBeGreaterThan(-1);
     expect(slideHeadingIndex).toBeGreaterThan(sessionGuideIndex);
   });
+
+  it("renders a Key Points sub-heading with bullets under Trainer Pointer", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          {
+            type: "trainerPointer",
+            title: "Trainer Pointer",
+            content: "Welcome the class.",
+            keyPoints: ["Sets a collaborative tone.", "Establishes the agenda."],
+          },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Key Points");
+    expect(xml).toContain("Sets a collaborative tone.");
+    expect(xml).toContain("Establishes the agenda.");
+  });
+
+  it("does not render a Key Points heading when trainerPointer has no keyPoints", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          { type: "trainerPointer", title: "Trainer Pointer", content: "Welcome the class." },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).not.toContain("Key Points");
+  });
+
+  it("renders the Relevance of this Slide heading for a howThisFits section", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          { type: "howThisFits", title: "", content: "This slide connects to the next module." },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Relevance of this Slide");
+    expect(xml).not.toContain("How This Fits");
+  });
 });

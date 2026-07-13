@@ -87,6 +87,16 @@ function sectionToParagraphs(section: GuideSection): Paragraph[] {
     }
   }
 
+  if (section.keyPoints && section.keyPoints.length > 0) {
+    paragraphs.push(
+      new Paragraph({
+        heading: HeadingLevel.HEADING_3,
+        children: [new TextRun("Key Points")],
+      })
+    );
+    paragraphs.push(...bulletParagraphs(section.keyPoints));
+  }
+
   return paragraphs;
 }
 
