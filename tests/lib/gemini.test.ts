@@ -126,4 +126,42 @@ describe("analyzeDeck", () => {
 
     await expect(analyzeDeck(["text"])).rejects.toThrow();
   });
+
+  it("salvages a valid workshopTitle/duration when learningObjectives is out of range", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            workshopTitle: "AI in Practice",
+            duration: "4:00 PM to 6:30 PM",
+            learningObjectives: ["Understand X"],
+          }),
+      },
+    });
+
+    const result = await analyzeDeck(["Some slide text"]);
+
+    expect(result.workshopTitle).toBe("AI in Practice");
+    expect(result.duration).toBe("4:00 PM to 6:30 PM");
+    expect(result.learningObjectives).toEqual([]);
+  });
+
+  it("salvages a valid workshopTitle/duration when learningObjectives has too many items", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            workshopTitle: "AI in Practice",
+            duration: null,
+            learningObjectives: ["A", "B", "C", "D", "E", "F"],
+          }),
+      },
+    });
+
+    const result = await analyzeDeck(["Some slide text"]);
+
+    expect(result.workshopTitle).toBe("AI in Practice");
+    expect(result.duration).toBeNull();
+    expect(result.learningObjectives).toEqual([]);
+  });
 });

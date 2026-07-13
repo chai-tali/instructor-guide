@@ -49,9 +49,10 @@ export async function processJob(jobId: string): Promise<void> {
           learningObjectives: JSON.stringify(deckAnalysis.learningObjectives),
         },
       });
-    } catch {
+    } catch (err) {
       // Deck-level analysis is best-effort: a failure here must not fail the whole
       // job. Export falls back to filename-as-title and blank duration/objectives.
+      console.warn(`analyzeDeck failed for job ${jobId}:`, err);
     }
 
     const slideRecords = await Promise.all(

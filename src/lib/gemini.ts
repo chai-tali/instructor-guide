@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { z } from "zod";
 import type { Schema } from "@google/generative-ai";
-import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
 import type { SlideAnalysis, InstructorGuide, SlideIntent, SectionKey, DeckAnalysis } from "@/types/guide";
 
@@ -224,5 +225,19 @@ export async function analyzeDeck(slideTexts: string[]): Promise<DeckAnalysis> {
   ]);
 
   const parsed = JSON.parse(result.response.text());
-  return deckAnalysisSchema.parse(parsed);
+
+  // workshopTitle and duration are validated independently of learningObjectives
+  // so that a good title/duration extraction is never discarded just because the
+  // objectives array came back out of the expected 3-5 item range.
+  const workshopTitle = z.string().nullable().parse(parsed.workshopTitle);
+  const duration = z.string().nullable().parse(parsed.duration);
+
+  let learningObjectives: string[];
+  try {
+    learningObjectives = z.array(z.string()).min(3).max(5).parse(parsed.learningObjectives);
+  } catch {
+    learningObjectives = [];
+  }
+
+  return { workshopTitle, duration, learningObjectives };
 }

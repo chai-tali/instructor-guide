@@ -150,7 +150,8 @@ describe("processJob", () => {
 
     vi.mocked(convertPptxToSlideImages).mockResolvedValue(1);
     vi.mocked(extractSlideTexts).mockResolvedValue(["Some slide text"]);
-    vi.mocked(analyzeDeck).mockRejectedValue(new Error("Gemini timeout"));
+    const deckError = new Error("Gemini timeout");
+    vi.mocked(analyzeDeck).mockRejectedValue(deckError);
     vi.mocked(analyzeSlide).mockResolvedValue({
       slideIntent: "CONCEPT",
       recommendedSections: ["trainerPointer"],
@@ -159,6 +160,7 @@ describe("processJob", () => {
     vi.mocked(generateGuide).mockResolvedValue({
       sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Explain it." }],
     });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await processJob(job.id);
 
@@ -167,5 +169,11 @@ describe("processJob", () => {
     expect(updated.workshopTitle).toBeNull();
     expect(updated.duration).toBeNull();
     expect(updated.learningObjectives).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`analyzeDeck failed for job ${job.id}`),
+      deckError
+    );
+
+    warnSpy.mockRestore();
   });
 });
