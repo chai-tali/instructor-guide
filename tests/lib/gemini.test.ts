@@ -27,7 +27,7 @@ describe("analyzeSlide", () => {
         text: () =>
           JSON.stringify({
             slideIntent: "CONCEPT",
-            recommendedSections: ["trainerPointer", "whyItMatters"],
+            recommendedSections: ["trainerPointer", "mentalModel"],
             confidence: 0.9,
           }),
       },
@@ -36,7 +36,7 @@ describe("analyzeSlide", () => {
     const result = await analyzeSlide("base64image", "some slide text");
 
     expect(result.slideIntent).toBe("CONCEPT");
-    expect(result.recommendedSections).toEqual(["trainerPointer", "whyItMatters"]);
+    expect(result.recommendedSections).toEqual(["trainerPointer", "mentalModel"]);
     expect(result.confidence).toBe(0.9);
   });
 

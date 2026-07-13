@@ -23,14 +23,12 @@ export type SlideIntent = (typeof SLIDE_INTENTS)[number];
 
 export const SECTION_KEYS = [
   "trainerPointer",
-  "whyItMatters",
   "mentalModel",
   "bestPractices",
   "commonPitfalls",
   "realWorldImplementation",
   "howThisFits",
   "faq",
-  "interviewQuestions",
 ] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
@@ -50,6 +48,7 @@ export interface GuideSection {
   title: string;
   content?: string;
   items?: GuideSectionItem[];
+  keyPoints?: string[];
 }
 
 export interface InstructorGuide {
@@ -58,14 +57,12 @@ export interface InstructorGuide {
 
 export const SECTION_TITLES: Record<string, string> = {
   trainerPointer: "Trainer Pointer",
-  whyItMatters: "Why It Matters",
   mentalModel: "Mental Model",
   bestPractices: "Best Practices",
   commonPitfalls: "Common Pitfalls",
   realWorldImplementation: "Real World Implementation",
-  howThisFits: "How This Fits",
+  howThisFits: "Relevance of this Slide",
   faq: "FAQ",
-  interviewQuestions: "Interview Questions",
 };
 
 export interface DeckAnalysis {

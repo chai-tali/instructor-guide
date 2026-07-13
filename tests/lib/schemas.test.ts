@@ -5,7 +5,7 @@ describe("slideAnalysisSchema", () => {
   it("accepts a valid analysis payload", () => {
     const result = slideAnalysisSchema.parse({
       slideIntent: "ARCHITECTURE",
-      recommendedSections: ["trainerPointer", "whyItMatters"],
+      recommendedSections: ["trainerPointer", "mentalModel"],
       confidence: 0.97,
     });
     expect(result.slideIntent).toBe("ARCHITECTURE");
