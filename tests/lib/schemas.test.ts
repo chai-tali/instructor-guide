@@ -30,6 +30,16 @@ describe("slideAnalysisSchema", () => {
       })
     ).toThrow();
   });
+
+  it("accepts KEY_TAKEAWAYS intent with keyTakeaways recommended", () => {
+    const result = slideAnalysisSchema.parse({
+      slideIntent: "KEY_TAKEAWAYS",
+      recommendedSections: ["keyTakeaways"],
+      confidence: 0.95,
+    });
+    expect(result.slideIntent).toBe("KEY_TAKEAWAYS");
+    expect(result.recommendedSections).toEqual(["keyTakeaways"]);
+  });
 });
 
 describe("instructorGuideSchema", () => {

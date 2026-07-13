@@ -26,7 +26,7 @@ You will receive:
 STEP 1: Determine the slide's instructional intent. Choose exactly ONE value from the allowed slideIntent enum.
 
 STEP 2: Determine which instructor guide sections are genuinely useful. Available sections are:
-trainerPointer, mentalModel, bestPractices, commonPitfalls, realWorldImplementation, howThisFits, faq.
+trainerPointer, mentalModel, bestPractices, commonPitfalls, realWorldImplementation, howThisFits, faq, keyTakeaways.
 
 Only recommend sections that genuinely improve teaching. Do NOT recommend sections simply because they exist.
 
@@ -36,6 +36,7 @@ AGENDA -> trainerPointer
 SECTION_DIVIDER -> trainerPointer
 THANK_YOU -> (no sections)
 SUMMARY -> trainerPointer
+KEY_TAKEAWAYS -> keyTakeaways
 CONCEPT -> trainerPointer, commonPitfalls, faq
 ARCHITECTURE -> trainerPointer, mentalModel, commonPitfalls, faq
 PROCESS -> trainerPointer, commonPitfalls, faq
@@ -44,6 +45,8 @@ DEMO -> trainerPointer, bestPractices, commonPitfalls, faq
 EXERCISE -> trainerPointer, bestPractices, faq
 
 FAQ Rule: Recommend FAQ only if learners are reasonably expected to ask clarification questions about the concept.
+
+Key Takeaways Rule: If the slide explicitly recaps what participants learned/covered across the session or program (e.g. headed "Key Takeaways", "What You Learned", "Recap"), set slideIntent to KEY_TAKEAWAYS and recommend ONLY keyTakeaways for that slide — do NOT also recommend trainerPointer.
 
 STEP 3: Estimate your confidence. Return a value between 0.0 and 1.0.
 
@@ -70,6 +73,8 @@ realWorldImplementation: Provide 1-3 practical examples of how this concept is u
 howThisFits: Explain how this concept connects to the surrounding learning journey. Avoid generic statements like "This comes next."
 
 faq: Generate 2-5 realistic learner questions. Each must include a question and an answer. Do not invent advanced questions.
+
+keyTakeaways: The slide recaps what participants learned/covered in the session. Explain how the trainer should walk participants through the specific takeaways actually listed on the slide — never invent generic filler. Maximum 120 words.
 
 General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/tips/pitfalls/examples, each one MUST be on its own line, formatted as a markdown bullet ("- " or "* " prefix) — never merge multiple points into one sentence or paragraph. Return ONLY valid JSON.`;
 

@@ -14,6 +14,7 @@ export const SLIDE_INTENTS = [
   "EXERCISE",
   "CASE_STUDY",
   "SUMMARY",
+  "KEY_TAKEAWAYS",
   "REFERENCE",
   "THANK_YOU",
   "APPENDIX",
@@ -29,6 +30,7 @@ export const SECTION_KEYS = [
   "realWorldImplementation",
   "howThisFits",
   "faq",
+  "keyTakeaways",
 ] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
@@ -63,6 +65,7 @@ export const SECTION_TITLES: Record<string, string> = {
   realWorldImplementation: "Real World Implementation",
   howThisFits: "Relevance of the Slide",
   faq: "Frequently Asked Questions by Learners",
+  keyTakeaways: "Key Takeaways",
 };
 
 export interface DeckAnalysis {

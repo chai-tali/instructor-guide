@@ -178,4 +178,21 @@ describe("buildInstructorGuideDocx front matter", () => {
     expect(xml).toContain("Relevance of the Slide");
     expect(xml).not.toContain("How This Fits");
   });
+
+  it("renders the Key Takeaways heading for a keyTakeaways section", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          {
+            type: "keyTakeaways",
+            title: "",
+            content: "Walk participants through each takeaway listed on the slide.",
+          },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Key Takeaways");
+    expect(xml).toContain("Walk participants through each takeaway listed on the slide.");
+  });
 });
