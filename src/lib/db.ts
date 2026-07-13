@@ -19,6 +19,9 @@ export interface JobRow {
   totalSlides: number | null;
   completedSlides: number;
   error: string | null;
+  workshopTitle: string | null;
+  duration: string | null;
+  learningObjectives: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

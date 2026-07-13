@@ -5,6 +5,9 @@ CREATE TABLE IF NOT EXISTS "Job" (
     "totalSlides" INTEGER,
     "completedSlides" INTEGER NOT NULL DEFAULT 0,
     "error" TEXT,
+    "workshopTitle" TEXT,
+    "duration" TEXT,
+    "learningObjectives" TEXT,
     "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -23,3 +26,7 @@ CREATE TABLE IF NOT EXISTS "Slide" (
     "error" TEXT,
     UNIQUE ("jobId", "index")
 );
+
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "workshopTitle" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "duration" TEXT;
+ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "learningObjectives" TEXT;
