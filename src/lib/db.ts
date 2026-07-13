@@ -36,6 +36,7 @@ export interface SlideRow {
   recommendedSections: string | null;
   confidence: number | null;
   sections: string | null;
+  slideTitle: string | null;
   status: string;
   error: string | null;
 }

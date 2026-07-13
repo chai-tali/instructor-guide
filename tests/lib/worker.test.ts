@@ -54,6 +54,7 @@ describe("processJob", () => {
       slideIntent: "CONCEPT",
       recommendedSections: ["trainerPointer"],
       confidence: 0.9,
+      slideTitle: "Structured Prompting",
     });
     vi.mocked(generateGuide).mockResolvedValue({
       sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Explain it." }],
@@ -71,6 +72,7 @@ describe("processJob", () => {
     });
     expect(slides).toHaveLength(2);
     expect(slides[0].status).toBe("done");
+    expect(slides[0].slideTitle).toBe("Structured Prompting");
     expect(JSON.parse(slides[0].sections!)).toEqual([
       { type: "trainerPointer", title: "Trainer Pointer", content: "Explain it." },
     ]);
@@ -90,6 +92,7 @@ describe("processJob", () => {
         slideIntent: "CONCEPT",
         recommendedSections: ["trainerPointer"],
         confidence: 0.9,
+        slideTitle: "Structured Prompting",
       })
       .mockRejectedValueOnce(new Error("Gemini timeout"));
     vi.mocked(generateGuide).mockResolvedValue({
@@ -125,6 +128,7 @@ describe("processJob", () => {
       slideIntent: "WELCOME",
       recommendedSections: ["trainerPointer"],
       confidence: 0.9,
+      slideTitle: "Welcome",
     });
     vi.mocked(generateGuide).mockResolvedValue({
       sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Welcome them." }],
@@ -156,6 +160,7 @@ describe("processJob", () => {
       slideIntent: "CONCEPT",
       recommendedSections: ["trainerPointer"],
       confidence: 0.9,
+      slideTitle: "Structured Prompting",
     });
     vi.mocked(generateGuide).mockResolvedValue({
       sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Explain it." }],

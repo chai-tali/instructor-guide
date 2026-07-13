@@ -22,6 +22,7 @@ export default async function GuidePage({ params }: { params: { jobId: string } 
           imagePath={`/api/slides/${slide.id}/image`}
           status={slide.status}
           sections={slide.sections ? (JSON.parse(slide.sections) as GuideSection[]) : []}
+          slideTitle={slide.slideTitle}
         />
       ))}
     </main>

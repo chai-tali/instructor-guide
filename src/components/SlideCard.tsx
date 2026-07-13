@@ -9,16 +9,18 @@ export function SlideCard({
   imagePath,
   status,
   sections,
+  slideTitle,
 }: {
   id: string;
   index: number;
   imagePath: string;
   status: string;
   sections: GuideSection[];
+  slideTitle?: string | null;
 }) {
   return (
     <section>
-      <h2>Slide {index + 1}</h2>
+      <h2>Slide {index + 1}{slideTitle ? `: ${slideTitle}` : ""}</h2>
       <img src={imagePath} alt={`Slide ${index + 1}`} width={480} />
       {status === "failed" && (
         <>

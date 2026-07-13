@@ -29,6 +29,7 @@ describe("analyzeSlide", () => {
             slideIntent: "CONCEPT",
             recommendedSections: ["trainerPointer", "mentalModel"],
             confidence: 0.9,
+            slideTitle: "Structured Prompting",
           }),
       },
     });
@@ -38,6 +39,43 @@ describe("analyzeSlide", () => {
     expect(result.slideIntent).toBe("CONCEPT");
     expect(result.recommendedSections).toEqual(["trainerPointer", "mentalModel"]);
     expect(result.confidence).toBe(0.9);
+    expect(result.slideTitle).toBe("Structured Prompting");
+  });
+
+  it("passes through a null slideTitle when the slide has no clear title", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            slideIntent: "OTHER",
+            recommendedSections: [],
+            confidence: 0.6,
+            slideTitle: null,
+          }),
+      },
+    });
+
+    const result = await analyzeSlide("base64image", "some slide text");
+
+    expect(result.slideTitle).toBeNull();
+  });
+
+  it("strips em dashes from slideTitle", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            slideIntent: "CONCEPT",
+            recommendedSections: [],
+            confidence: 0.9,
+            slideTitle: "Structured Prompting—Financial Analysis",
+          }),
+      },
+    });
+
+    const result = await analyzeSlide("base64image", "text");
+
+    expect(result.slideTitle).toBe("Structured Prompting, Financial Analysis");
   });
 
   it("throws when the response does not match the schema", async () => {

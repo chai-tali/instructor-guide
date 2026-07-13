@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS "Slide" (
     "recommendedSections" TEXT,
     "confidence" DOUBLE PRECISION,
     "sections" TEXT,
+    "slideTitle" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
     "error" TEXT,
     UNIQUE ("jobId", "index")
@@ -30,3 +31,4 @@ CREATE TABLE IF NOT EXISTS "Slide" (
 ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "workshopTitle" TEXT;
 ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "duration" TEXT;
 ALTER TABLE "Job" ADD COLUMN IF NOT EXISTS "learningObjectives" TEXT;
+ALTER TABLE "Slide" ADD COLUMN IF NOT EXISTS "slideTitle" TEXT;

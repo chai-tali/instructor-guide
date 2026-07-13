@@ -51,6 +51,8 @@ You will receive:
 
 STEP 1: Determine the slide's instructional intent. Choose exactly ONE value from the allowed slideIntent enum.
 
+STEP 1b: Identify the slide's own visible title text (the heading actually printed on the slide), ONLY if one is clearly present. If the slide has no clear title (e.g. a QR code slide, a pure image slide), return null. Do not invent or infer a title that isn't actually shown on the slide. NEVER use an em dash (—) in the title; use a comma, period, or parentheses instead.
+
 STEP 2: Determine which instructor guide sections are genuinely useful. Available sections are:
 trainerPointer, mentalModel, bestPractices, commonPitfalls, realWorldImplementation, howThisFits, faq, keyTakeaways.
 
@@ -121,8 +123,9 @@ const analyzerResponseSchema: Schema = {
       },
     },
     confidence: { type: SchemaType.NUMBER },
+    slideTitle: { type: SchemaType.STRING, nullable: true },
   },
-  required: ["slideIntent", "recommendedSections", "confidence"],
+  required: ["slideIntent", "recommendedSections", "confidence", "slideTitle"],
 };
 
 const generatorResponseSchema: Schema = {
@@ -178,7 +181,11 @@ export async function analyzeSlide(
   ]);
 
   const parsed = JSON.parse(result.response.text());
-  return slideAnalysisSchema.parse(parsed);
+  const analysis = slideAnalysisSchema.parse(parsed);
+  return {
+    ...analysis,
+    slideTitle: analysis.slideTitle !== null ? stripEmDash(analysis.slideTitle) : null,
+  };
 }
 
 export async function generateGuide(

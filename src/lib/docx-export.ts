@@ -116,10 +116,14 @@ function sectionToParagraphs(section: GuideSection): Paragraph[] {
 }
 
 async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
+  const heading = slide.slideTitle
+    ? `Slide ${slide.index + 1}: ${slide.slideTitle}`
+    : `Slide ${slide.index + 1}`;
+
   const paragraphs: Paragraph[] = [
     new Paragraph({
       heading: HeadingLevel.HEADING_1,
-      children: [new TextRun(`Slide ${slide.index + 1}`)],
+      children: [new TextRun(heading)],
     }),
   ];
 

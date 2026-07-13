@@ -5,6 +5,7 @@ export const slideAnalysisSchema = z.object({
   slideIntent: z.enum(SLIDE_INTENTS),
   recommendedSections: z.array(z.enum(SECTION_KEYS)),
   confidence: z.number().min(0).max(1),
+  slideTitle: z.string().nullable(),
 });
 
 export const guideSectionItemSchema = z.object({

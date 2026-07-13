@@ -7,8 +7,20 @@ describe("slideAnalysisSchema", () => {
       slideIntent: "ARCHITECTURE",
       recommendedSections: ["trainerPointer", "mentalModel"],
       confidence: 0.97,
+      slideTitle: "The Five-Block Architecture",
     });
     expect(result.slideIntent).toBe("ARCHITECTURE");
+    expect(result.slideTitle).toBe("The Five-Block Architecture");
+  });
+
+  it("accepts a null slideTitle", () => {
+    const result = slideAnalysisSchema.parse({
+      slideIntent: "OTHER",
+      recommendedSections: [],
+      confidence: 0.6,
+      slideTitle: null,
+    });
+    expect(result.slideTitle).toBeNull();
   });
 
   it("rejects an invalid slideIntent", () => {
@@ -17,6 +29,7 @@ describe("slideAnalysisSchema", () => {
         slideIntent: "NOT_A_REAL_INTENT",
         recommendedSections: [],
         confidence: 0.5,
+        slideTitle: null,
       })
     ).toThrow();
   });
@@ -27,6 +40,7 @@ describe("slideAnalysisSchema", () => {
         slideIntent: "SUMMARY",
         recommendedSections: [],
         confidence: 1.5,
+        slideTitle: null,
       })
     ).toThrow();
   });
@@ -36,6 +50,7 @@ describe("slideAnalysisSchema", () => {
       slideIntent: "KEY_TAKEAWAYS",
       recommendedSections: ["keyTakeaways"],
       confidence: 0.95,
+      slideTitle: "Key Takeaways",
     });
     expect(result.slideIntent).toBe("KEY_TAKEAWAYS");
     expect(result.recommendedSections).toEqual(["keyTakeaways"]);

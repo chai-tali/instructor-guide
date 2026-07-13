@@ -104,6 +104,7 @@ export async function processSlide(slideId: string, jobId: string): Promise<void
         recommendedSections: JSON.stringify(analysis.recommendedSections),
         confidence: analysis.confidence,
         sections: JSON.stringify(guide.sections),
+        slideTitle: analysis.slideTitle,
         status: "done",
       },
     });

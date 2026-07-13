@@ -17,6 +17,7 @@ vi.mock("@/lib/gemini", () => ({
     recommendedSections:
       text.includes("Welcome") || text.includes("Agenda") ? ["trainerPointer"] : [],
     confidence: 0.95,
+    slideTitle: null,
   })),
   generateGuide: vi
     .fn()

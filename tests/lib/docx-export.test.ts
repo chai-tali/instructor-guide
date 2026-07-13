@@ -33,6 +33,7 @@ function fakeSlide(overrides: Partial<SlideRow> = {}): SlideRow {
     recommendedSections: null,
     confidence: null,
     sections: null,
+    slideTitle: null,
     status: "done",
     error: null,
     ...overrides,
@@ -149,6 +150,21 @@ describe("buildInstructorGuideDocx front matter", () => {
     const slideHeadingIndex = xml.indexOf("Slide 1");
     expect(sessionGuideIndex).toBeGreaterThan(-1);
     expect(slideHeadingIndex).toBeGreaterThan(sessionGuideIndex);
+  });
+
+  it("appends the slide title to the slide heading when present", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({ slideTitle: "Structured Prompting for Financial Analysis" }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Slide 1: Structured Prompting for Financial Analysis");
+  });
+
+  it("renders just the slide number when slideTitle is null", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [fakeSlide({ slideTitle: null })]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Slide 1");
+    expect(xml).not.toContain("Slide 1:");
   });
 
   it("renders a Key Points sub-heading with bullets under Trainer Pointer", async () => {

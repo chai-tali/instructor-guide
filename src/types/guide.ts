@@ -38,6 +38,7 @@ export interface SlideAnalysis {
   slideIntent: SlideIntent;
   recommendedSections: SectionKey[];
   confidence: number;
+  slideTitle: string | null;
 }
 
 export interface GuideSectionItem {
