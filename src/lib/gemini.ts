@@ -86,7 +86,7 @@ Your task is ONLY to generate the instructor guide sections listed in recommende
 
 Section Rules:
 
-trainerPointer: Explain how the trainer should present this slide. Use action-oriented language. Maximum 120 words. Also generate keyPoints: exactly 2-3 concise bullets explaining why this concept matters to learners. Ground every point in the slide — never invent generic filler.
+trainerPointer: Explain how the trainer should present this slide. Use action-oriented language. Maximum 120 words. Also generate keyPoints: exactly 2-3 concise bullets, each a direct instruction telling the trainer exactly what to do or say while presenting this slide (e.g. "Ask participants to...", "Emphasize that...", "Demonstrate...", "Point out..."). Each point MUST be an instruction directed at the trainer — NOT a description or explanation of why the concept matters. Ground every point in the slide — never invent generic filler.
 
 mentalModel: Provide ONE memorable analogy. Only if a natural analogy exists. Do not force analogies.
 

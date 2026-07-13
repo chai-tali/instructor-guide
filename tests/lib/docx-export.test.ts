@@ -195,6 +195,23 @@ describe("buildInstructorGuideDocx front matter", () => {
     expect(xml).not.toContain("How This Fits");
   });
 
+  it("prefers the canonical title over Gemini's own generated title for a known section type", async () => {
+    // Gemini always fills in its own `title` field (the response schema requires it),
+    // so a howThisFits section from a real Gemini response still arrives with the old
+    // "How This Fits" title text even after SECTION_TITLES was renamed. The renderer
+    // must use SECTION_TITLES over Gemini's title for any type it recognizes.
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          { type: "howThisFits", title: "How This Fits", content: "This slide connects to the next module." },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Relevance of the Slide");
+    expect(xml).not.toContain("How This Fits");
+  });
+
   it("renders the Key Takeaways heading for a keyTakeaways section", async () => {
     const buffer = await buildInstructorGuideDocx(fakeJob(), [
       fakeSlide({

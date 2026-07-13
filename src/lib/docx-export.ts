@@ -20,7 +20,7 @@ import {
   AlignmentType,
 } from "docx";
 import type { JobRow, SlideRow } from "@/lib/db";
-import { SECTION_TITLES } from "@/types/guide";
+import { sectionDisplayTitle } from "@/types/guide";
 import type { GuideSection } from "@/types/guide";
 import { parseMarkdownLite } from "@/lib/markdown-lite";
 import type { MarkdownBlock } from "@/lib/markdown-lite";
@@ -81,7 +81,7 @@ function sectionToParagraphs(section: GuideSection): Paragraph[] {
   const paragraphs: Paragraph[] = [
     new Paragraph({
       heading: HeadingLevel.HEADING_2,
-      children: [new TextRun(section.title || SECTION_TITLES[section.type] || section.type)],
+      children: [new TextRun(sectionDisplayTitle(section))],
     }),
   ];
 

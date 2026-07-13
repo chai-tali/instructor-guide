@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import type { GuideSection } from "@/types/guide";
-import { SECTION_TITLES } from "@/types/guide";
+import { sectionDisplayTitle } from "@/types/guide";
 import { RetrySlideButton } from "@/components/RetrySlideButton";
 
 export function SlideCard({
@@ -30,7 +30,7 @@ export function SlideCard({
       )}
       {sections.map((section) => (
         <div key={section.type}>
-          <h3>{section.title || SECTION_TITLES[section.type] || section.type}</h3>
+          <h3>{sectionDisplayTitle(section)}</h3>
           {section.content && <ReactMarkdown>{section.content}</ReactMarkdown>}
           {section.items && (
             <ul>

@@ -68,6 +68,14 @@ export const SECTION_TITLES: Record<string, string> = {
   keyTakeaways: "Key Takeaways",
 };
 
+// Gemini always fills in its own `title` for every generated section (the response
+// schema requires it), so it can't be trusted to reflect renames made to
+// SECTION_TITLES here. Our canonical title always wins for known section types;
+// Gemini's own title is only used as a fallback for a type we don't recognize.
+export function sectionDisplayTitle(section: Pick<GuideSection, "type" | "title">): string {
+  return SECTION_TITLES[section.type] || section.title || section.type;
+}
+
 export interface DeckAnalysis {
   workshopTitle: string | null;
   duration: string | null;
