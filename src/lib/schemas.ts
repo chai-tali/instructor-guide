@@ -22,3 +22,9 @@ export const guideSectionSchema = z.object({
 export const instructorGuideSchema = z.object({
   sections: z.array(guideSectionSchema),
 });
+
+export const deckAnalysisSchema = z.object({
+  workshopTitle: z.string().nullable(),
+  duration: z.string().nullable(),
+  learningObjectives: z.array(z.string()).min(3).max(5),
+});

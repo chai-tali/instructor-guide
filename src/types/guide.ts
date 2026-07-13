@@ -67,3 +67,9 @@ export const SECTION_TITLES: Record<string, string> = {
   faq: "FAQ",
   interviewQuestions: "Interview Questions",
 };
+
+export interface DeckAnalysis {
+  workshopTitle: string | null;
+  duration: string | null;
+  learningObjectives: string[];
+}

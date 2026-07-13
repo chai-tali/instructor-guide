@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema } from "@/lib/schemas";
 
 describe("slideAnalysisSchema", () => {
   it("accepts a valid analysis payload", () => {
@@ -50,6 +50,52 @@ describe("instructorGuideSchema", () => {
   it("rejects a section missing required fields", () => {
     expect(() =>
       instructorGuideSchema.parse({ sections: [{ title: "Missing type" }] })
+    ).toThrow();
+  });
+});
+
+describe("deckAnalysisSchema", () => {
+  it("accepts a full deck analysis payload", () => {
+    const result = deckAnalysisSchema.parse({
+      workshopTitle: "AI in Practice",
+      duration: "4:00 PM to 6:30 PM",
+      learningObjectives: [
+        "Understand the five-block prompt architecture",
+        "Apply structured prompts to extract financial data",
+        "Identify common LLM hallucination risks",
+      ],
+    });
+    expect(result.workshopTitle).toBe("AI in Practice");
+    expect(result.learningObjectives).toHaveLength(3);
+  });
+
+  it("accepts null workshopTitle and duration", () => {
+    const result = deckAnalysisSchema.parse({
+      workshopTitle: null,
+      duration: null,
+      learningObjectives: ["Understand X", "Apply Y", "Identify Z"],
+    });
+    expect(result.workshopTitle).toBeNull();
+    expect(result.duration).toBeNull();
+  });
+
+  it("rejects fewer than 3 learning objectives", () => {
+    expect(() =>
+      deckAnalysisSchema.parse({
+        workshopTitle: null,
+        duration: null,
+        learningObjectives: ["Understand X"],
+      })
+    ).toThrow();
+  });
+
+  it("rejects more than 5 learning objectives", () => {
+    expect(() =>
+      deckAnalysisSchema.parse({
+        workshopTitle: null,
+        duration: null,
+        learningObjectives: ["A", "B", "C", "D", "E", "F"],
+      })
     ).toThrow();
   });
 });
