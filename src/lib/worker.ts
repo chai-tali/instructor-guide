@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import { db } from "@/lib/db";
 import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
-import { analyzeSlide, generateGuide } from "@/lib/gemini";
+import { analyzeSlide, generateGuide, analyzeDeck } from "@/lib/gemini";
 import { getStorageDir } from "@/lib/storage";
 import type { SlideIntent, SectionKey } from "@/types/guide";
 
@@ -38,6 +38,21 @@ export async function processJob(jobId: string): Promise<void> {
     const texts = await extractSlideTexts(pptxPath);
 
     await db.job.update({ where: { id: jobId }, data: { totalSlides: slideCount } });
+
+    try {
+      const deckAnalysis = await analyzeDeck(texts);
+      await db.job.update({
+        where: { id: jobId },
+        data: {
+          workshopTitle: deckAnalysis.workshopTitle,
+          duration: deckAnalysis.duration,
+          learningObjectives: JSON.stringify(deckAnalysis.learningObjectives),
+        },
+      });
+    } catch {
+      // Deck-level analysis is best-effort: a failure here must not fail the whole
+      // job. Export falls back to filename-as-title and blank duration/objectives.
+    }
 
     const slideRecords = await Promise.all(
       Array.from({ length: slideCount }, (_, index) =>

@@ -12,11 +12,12 @@ vi.mock("@/lib/extraction", () => ({
 vi.mock("@/lib/gemini", () => ({
   analyzeSlide: vi.fn(),
   generateGuide: vi.fn(),
+  analyzeDeck: vi.fn(),
 }));
 
 import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
-import { analyzeSlide, generateGuide } from "@/lib/gemini";
+import { analyzeSlide, generateGuide, analyzeDeck } from "@/lib/gemini";
 import { processJob } from "@/lib/worker";
 import { db } from "@/lib/db";
 
@@ -32,6 +33,7 @@ describe("processJob", () => {
     vi.mocked(extractSlideTexts).mockReset();
     vi.mocked(analyzeSlide).mockReset();
     vi.mocked(generateGuide).mockReset();
+    vi.mocked(analyzeDeck).mockReset();
   });
 
   afterAll(async () => {
@@ -104,5 +106,66 @@ describe("processJob", () => {
       orderBy: { index: "asc" },
     });
     expect(slides.map((s) => s.status).sort()).toEqual(["done", "failed"]);
+  });
+
+  it("persists workshopTitle, duration, and learningObjectives from analyzeDeck", async () => {
+    const job = await db.job.create({ filename: "deck.pptx", status: "pending" });
+    const slidesDir = path.join(tmpDir, job.id, "slides");
+    await fs.mkdir(slidesDir, { recursive: true });
+    await fs.writeFile(path.join(slidesDir, "1.png"), Buffer.from("fake-png"));
+
+    vi.mocked(convertPptxToSlideImages).mockResolvedValue(1);
+    vi.mocked(extractSlideTexts).mockResolvedValue(["Welcome to AI in Practice"]);
+    vi.mocked(analyzeDeck).mockResolvedValue({
+      workshopTitle: "AI in Practice",
+      duration: "4:00 PM to 6:30 PM",
+      learningObjectives: ["Understand prompting", "Apply structured prompts", "Identify pitfalls"],
+    });
+    vi.mocked(analyzeSlide).mockResolvedValue({
+      slideIntent: "WELCOME",
+      recommendedSections: ["trainerPointer"],
+      confidence: 0.9,
+    });
+    vi.mocked(generateGuide).mockResolvedValue({
+      sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Welcome them." }],
+    });
+
+    await processJob(job.id);
+
+    const updated = await db.job.findUniqueOrThrow({ where: { id: job.id } });
+    expect(updated.workshopTitle).toBe("AI in Practice");
+    expect(updated.duration).toBe("4:00 PM to 6:30 PM");
+    expect(JSON.parse(updated.learningObjectives!)).toEqual([
+      "Understand prompting",
+      "Apply structured prompts",
+      "Identify pitfalls",
+    ]);
+  });
+
+  it("still completes the job when analyzeDeck fails", async () => {
+    const job = await db.job.create({ filename: "deck.pptx", status: "pending" });
+    const slidesDir = path.join(tmpDir, job.id, "slides");
+    await fs.mkdir(slidesDir, { recursive: true });
+    await fs.writeFile(path.join(slidesDir, "1.png"), Buffer.from("fake-png"));
+
+    vi.mocked(convertPptxToSlideImages).mockResolvedValue(1);
+    vi.mocked(extractSlideTexts).mockResolvedValue(["Some slide text"]);
+    vi.mocked(analyzeDeck).mockRejectedValue(new Error("Gemini timeout"));
+    vi.mocked(analyzeSlide).mockResolvedValue({
+      slideIntent: "CONCEPT",
+      recommendedSections: ["trainerPointer"],
+      confidence: 0.9,
+    });
+    vi.mocked(generateGuide).mockResolvedValue({
+      sections: [{ type: "trainerPointer", title: "Trainer Pointer", content: "Explain it." }],
+    });
+
+    await processJob(job.id);
+
+    const updated = await db.job.findUniqueOrThrow({ where: { id: job.id } });
+    expect(updated.status).toBe("done");
+    expect(updated.workshopTitle).toBeNull();
+    expect(updated.duration).toBeNull();
+    expect(updated.learningObjectives).toBeNull();
   });
 });
