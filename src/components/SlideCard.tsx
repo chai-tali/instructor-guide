@@ -42,6 +42,16 @@ export function SlideCard({
               ))}
             </ul>
           )}
+          {section.keyPoints && section.keyPoints.length > 0 && (
+            <>
+              <h4>Key Points</h4>
+              <ul>
+                {section.keyPoints.map((point, i) => (
+                  <li key={i}>{point}</li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
       ))}
     </section>
