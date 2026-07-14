@@ -14,7 +14,8 @@ vi.mock("@google/generative-ai", () => {
 
 process.env.GEMINI_API_KEY = "test-key";
 
-import { analyzeSlide, generateGuide, analyzeDeck } from "@/lib/gemini";
+import { analyzeSlide, generateGuide, analyzeDeck, classifyContentMode } from "@/lib/gemini";
+import type { ContentMode } from "@/types/guide";
 
 describe("analyzeSlide", () => {
   beforeEach(() => {
@@ -279,5 +280,39 @@ describe("analyzeDeck", () => {
       "Apply structured extraction, to filings",
       "Identify hallucination risks, in outputs",
     ]);
+  });
+});
+
+describe("classifyContentMode", () => {
+  beforeEach(() => {
+    generateContentMock.mockReset();
+  });
+
+  it("returns TEXTUAL for a text-heavy slide", async () => {
+    generateContentMock.mockResolvedValue({
+      response: { text: () => JSON.stringify({ contentMode: "TEXTUAL" }) },
+    });
+
+    const result: ContentMode = await classifyContentMode("base64image", "some slide text");
+
+    expect(result).toBe("TEXTUAL");
+  });
+
+  it("returns VISUAL for a diagram-heavy slide", async () => {
+    generateContentMock.mockResolvedValue({
+      response: { text: () => JSON.stringify({ contentMode: "VISUAL" }) },
+    });
+
+    const result = await classifyContentMode("base64image", "some slide text");
+
+    expect(result).toBe("VISUAL");
+  });
+
+  it("throws when the response does not match the schema", async () => {
+    generateContentMock.mockResolvedValue({
+      response: { text: () => JSON.stringify({ contentMode: "NOT_REAL" }) },
+    });
+
+    await expect(classifyContentMode("base64image", "text")).rejects.toThrow();
   });
 });

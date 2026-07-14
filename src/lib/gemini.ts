@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { z } from "zod";
 import type { Schema } from "@google/generative-ai";
-import { slideAnalysisSchema, instructorGuideSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema, contentModeSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
 import type {
   SlideAnalysis,
@@ -10,6 +10,7 @@ import type {
   SlideIntent,
   SectionKey,
   DeckAnalysis,
+  ContentMode,
 } from "@/types/guide";
 
 const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
@@ -186,6 +187,46 @@ export async function analyzeSlide(
     ...analysis,
     slideTitle: analysis.slideTitle !== null ? stripEmDash(analysis.slideTitle) : null,
   };
+}
+
+const CONTENT_MODE_PROMPT = `You are an expert Instructional Designer.
+
+Determine whether this slide is primarily TEXTUAL (mostly prose, bullet points, definitions) or primarily VISUAL (diagram, architecture, process, workflow, chart, graph, image, table -- where understanding the slide requires interpreting the visual, not just reading text).
+
+Return ONLY valid JSON. No explanation. No markdown.`;
+
+const contentModeResponseSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    contentMode: {
+      type: SchemaType.STRING,
+      format: "enum",
+      enum: ["TEXTUAL", "VISUAL"],
+    },
+  },
+  required: ["contentMode"],
+};
+
+export async function classifyContentMode(
+  imageBase64: string,
+  extractedText: string
+): Promise<ContentMode> {
+  const model = getClient().getGenerativeModel({
+    model: MODEL_NAME,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: contentModeResponseSchema,
+    },
+  });
+
+  const result = await model.generateContent([
+    { text: CONTENT_MODE_PROMPT },
+    { text: `OCR extracted text:\n${extractedText}` },
+    { inlineData: { mimeType: "image/png", data: imageBase64 } },
+  ]);
+
+  const parsed = JSON.parse(result.response.text());
+  return contentModeSchema.parse(parsed).contentMode;
 }
 
 export async function generateGuide(
