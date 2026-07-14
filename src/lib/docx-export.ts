@@ -20,7 +20,7 @@ import {
   AlignmentType,
 } from "docx";
 import type { JobRow, SlideRow } from "@/lib/db";
-import { sectionDisplayTitle } from "@/types/guide";
+import { sectionDisplayTitle, sgSectionDisplayTitle } from "@/types/guide";
 import type { GuideSection } from "@/types/guide";
 import { parseMarkdownLite } from "@/lib/markdown-lite";
 import type { MarkdownBlock } from "@/lib/markdown-lite";
@@ -115,7 +115,7 @@ function sectionToParagraphs(section: GuideSection): Paragraph[] {
   return paragraphs;
 }
 
-async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
+async function slideImageParagraphs(slide: SlideRow): Promise<Paragraph[]> {
   const heading = slide.slideTitle
     ? `Slide ${slide.index + 1}: ${slide.slideTitle}`
     : `Slide ${slide.index + 1}`;
@@ -149,11 +149,43 @@ async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
     );
   }
 
+  return paragraphs;
+}
+
+async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
+  const paragraphs = await slideImageParagraphs(slide);
   const sections: GuideSection[] = slide.sections ? JSON.parse(slide.sections) : [];
   for (const section of sections) {
     paragraphs.push(...sectionToParagraphs(section));
   }
+  return paragraphs;
+}
 
+function sgSectionToParagraphs(section: GuideSection): Paragraph[] {
+  const paragraphs: Paragraph[] = [
+    new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      children: [new TextRun(sgSectionDisplayTitle(section))],
+    }),
+  ];
+
+  if (section.content) {
+    paragraphs.push(...markdownBlocksToParagraphs(parseMarkdownLite(section.content)));
+  }
+
+  if (section.keyPoints && section.keyPoints.length > 0) {
+    paragraphs.push(...bulletParagraphs(section.keyPoints));
+  }
+
+  return paragraphs;
+}
+
+async function sgSlideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
+  const paragraphs = await slideImageParagraphs(slide);
+  const sections: GuideSection[] = slide.sgSections ? JSON.parse(slide.sgSections) : [];
+  for (const section of sections) {
+    paragraphs.push(...sgSectionToParagraphs(section));
+  }
   return paragraphs;
 }
 
@@ -213,6 +245,19 @@ function frontMatter(job: JobRow): (Paragraph | Table)[] {
   ];
 }
 
+function sgFrontMatter(job: JobRow): (Paragraph | Table)[] {
+  const title = job.workshopTitle ?? stripPptxExtension(job.filename);
+  const learningObjectives: string[] = job.learningObjectives ? JSON.parse(job.learningObjectives) : [];
+
+  return [
+    new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(title)] }),
+    new Paragraph({ children: [new TextRun(`Duration: ${job.duration ?? ""}`)] }),
+    heading("Learning Objectives"),
+    ...bulletParagraphs(learningObjectives),
+    heading("Student Guide"),
+  ];
+}
+
 async function buildHeader(): Promise<Header> {
   const logoBuffer = await fs.readFile(LOGO_PATH);
   const { width: rawWidth, height: rawHeight } = readPngDimensions(logoBuffer);
@@ -262,6 +307,27 @@ export async function buildInstructorGuideDocx(job: JobRow, slides: SlideRow[]):
         headers: { default: header },
         footers: { default: footer },
         children: [...frontMatter(job), ...slideParagraphs.flat()],
+      },
+    ],
+  });
+
+  return Packer.toBuffer(doc);
+}
+
+export async function buildStudentGuideDocx(job: JobRow, slides: SlideRow[]): Promise<Buffer> {
+  const [slideParagraphs, header] = await Promise.all([
+    Promise.all(slides.map(sgSlideToParagraphs)),
+    buildHeader(),
+  ]);
+  const footer = buildFooter();
+
+  const doc = new Document({
+    title: job.workshopTitle ?? stripPptxExtension(job.filename),
+    sections: [
+      {
+        headers: { default: header },
+        footers: { default: footer },
+        children: [...sgFrontMatter(job), ...slideParagraphs.flat()],
       },
     ],
   });

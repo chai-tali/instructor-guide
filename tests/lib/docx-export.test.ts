@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import path from "node:path";
 import JSZip from "jszip";
-import { buildInstructorGuideDocx, stripPptxExtension } from "@/lib/docx-export";
+import { buildInstructorGuideDocx, buildStudentGuideDocx, stripPptxExtension } from "@/lib/docx-export";
 import type { JobRow, SlideRow } from "@/lib/db";
 import { TRAINER_GUIDELINES_DOS, TRAINER_GUIDELINES_DONTS, MATERIAL_REQUIRED_ITEMS } from "@/lib/static-guide-content";
 
@@ -16,6 +16,7 @@ function fakeJob(overrides: Partial<JobRow> = {}): JobRow {
     workshopTitle: null,
     duration: null,
     learningObjectives: null,
+    guideTypes: '["ig","sg"]',
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -33,6 +34,8 @@ function fakeSlide(overrides: Partial<SlideRow> = {}): SlideRow {
     recommendedSections: null,
     confidence: null,
     sections: null,
+    contentMode: null,
+    sgSections: null,
     slideTitle: null,
     status: "done",
     error: null,
@@ -276,5 +279,93 @@ describe("buildInstructorGuideDocx header and footer", () => {
     const rightsIndex = xml.indexOf("All rights reserved");
     const pageFieldIndex = xml.indexOf("PAGE</w:instrText>");
     expect(pageFieldIndex).toBeGreaterThan(rightsIndex);
+  });
+});
+
+describe("buildStudentGuideDocx front matter", () => {
+  it("uses workshopTitle, duration, and learning objectives like IG", async () => {
+    const buffer = await buildStudentGuideDocx(
+      fakeJob({
+        workshopTitle: "AI in Practice",
+        duration: "4:00 PM to 6:30 PM",
+        learningObjectives: JSON.stringify(["Understand prompting"]),
+      }),
+      [fakeSlide()]
+    );
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("AI in Practice");
+    expect(xml).toContain("4:00 PM to 6:30 PM");
+    expect(xml).toContain("Understand prompting");
+  });
+
+  it("does not render Trainer Guidelines, Material Required, Training Aids, or Training videos", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [fakeSlide()]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).not.toContain("Trainer Guidelines");
+    expect(xml).not.toContain("Material Required for the Workshop");
+    expect(xml).not.toContain("Training Aids for the Workshop");
+    expect(xml).not.toContain("Training videos and important links");
+  });
+
+  it("renders a Student Guide heading before the per-slide content", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [fakeSlide()]);
+    const xml = await documentXmlOf(buffer);
+    const headingIndex = xml.indexOf("Student Guide");
+    const slideHeadingIndex = xml.indexOf("Slide 1");
+    expect(headingIndex).toBeGreaterThan(-1);
+    expect(slideHeadingIndex).toBeGreaterThan(headingIndex);
+  });
+});
+
+describe("buildStudentGuideDocx per-slide sections", () => {
+  it("renders all 4 SG section headings for a teaching slide", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [
+      fakeSlide({
+        sgSections: JSON.stringify([
+          { type: "coreExplanation", title: "Concept Explanation", content: "CAP is about trade-offs." },
+          { type: "rememberThis", title: "Remember This", keyPoints: ["Partition tolerance is non-negotiable."] },
+          { type: "mentalModel", title: "Mental Model", content: "Think of it like a seesaw." },
+          { type: "selfProbingQuestions", title: "Self-Probing Questions", keyPoints: ["Why must you choose?"] },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Concept Explanation");
+    expect(xml).toContain("CAP is about trade-offs.");
+    expect(xml).toContain("Remember This");
+    expect(xml).toContain("Partition tolerance is non-negotiable.");
+    expect(xml).toContain("Mental Model");
+    expect(xml).toContain("Think of it like a seesaw.");
+    expect(xml).toContain("Self-Probing Questions");
+    expect(xml).toContain("Why must you choose?");
+  });
+
+  it("renders only Core Explanation for a non-teaching slide", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [
+      fakeSlide({
+        sgSections: JSON.stringify([
+          { type: "coreExplanation", title: "Concept Explanation", content: "This slide closes the session." },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Concept Explanation");
+    expect(xml).toContain("This slide closes the session.");
+    expect(xml).not.toContain("Remember This");
+    expect(xml).not.toContain("Mental Model");
+    expect(xml).not.toContain("Self-Probing Questions");
+  });
+
+  it("uses the model's Visual Walkthrough title for a visual slide's coreExplanation", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [
+      fakeSlide({
+        sgSections: JSON.stringify([
+          { type: "coreExplanation", title: "Visual Walkthrough", content: "The chart shows adoption by function." },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).toContain("Visual Walkthrough");
+    expect(xml).toContain("The chart shows adoption by function.");
   });
 });
