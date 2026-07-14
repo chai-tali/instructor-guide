@@ -28,6 +28,21 @@ vi.mock("@/lib/gemini", () => ({
         content: "Generated content",
       })),
     })),
+  analyzeDeck: vi.fn().mockResolvedValue({
+    workshopTitle: null,
+    duration: null,
+    learningObjectives: [],
+  }),
+  classifyContentMode: vi.fn().mockResolvedValue("TEXTUAL"),
+  generateStudentGuide: vi.fn().mockImplementation(async (_img: string, _text: string, _intent: string, contentMode: string | null) => ({
+    sections:
+      _intent === "THANK_YOU"
+        ? [{ type: "coreExplanation", title: "Concept Explanation", content: "SG content" }]
+        : [
+            { type: "coreExplanation", title: "Concept Explanation", content: "SG content" },
+            { type: "rememberThis", title: "Remember This", keyPoints: ["Point one."] },
+          ],
+  })),
 }));
 
 import { processJob } from "@/lib/worker";
@@ -86,5 +101,34 @@ describe("full pipeline", () => {
     ]);
     expect(slides[2].slideIntent).toBe("THANK_YOU");
     expect(JSON.parse(slides[2].sections!)).toEqual([]);
+  });
+
+  it("generates SG-only content when guideTypes is ['sg']", async () => {
+    if (!(await hasSoffice())) {
+      console.warn("Skipping: soffice not installed in this environment");
+      return;
+    }
+
+    const job = await db.job.create({ filename: "sample.pptx", status: "pending", guideTypes: '["sg"]' });
+    const jobDir = path.join(tmpDir, job.id);
+    await fs.mkdir(jobDir, { recursive: true });
+    await fs.copyFile(
+      path.join(process.cwd(), "tests/fixtures/sample.pptx"),
+      path.join(jobDir, "original.pptx")
+    );
+
+    await processJob(job.id);
+
+    const slides = await db.slide.findMany({ where: { jobId: job.id }, orderBy: { index: "asc" } });
+    expect(slides).toHaveLength(3);
+    expect(slides[0].sections).toBeNull();
+    expect(JSON.parse(slides[0].sgSections!)).toEqual([
+      { type: "coreExplanation", title: "Concept Explanation", content: "SG content" },
+      { type: "rememberThis", title: "Remember This", keyPoints: ["Point one."] },
+    ]);
+    // slides[2] is the THANK_YOU slide -> non-teaching -> coreExplanation only
+    expect(JSON.parse(slides[2].sgSections!)).toEqual([
+      { type: "coreExplanation", title: "Concept Explanation", content: "SG content" },
+    ]);
   });
 });
