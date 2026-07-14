@@ -1,7 +1,46 @@
 import ReactMarkdown from "react-markdown";
 import type { GuideSection } from "@/types/guide";
-import { sectionDisplayTitle } from "@/types/guide";
+import { sectionDisplayTitle, sgSectionDisplayTitle } from "@/types/guide";
 import { RetrySlideButton } from "@/components/RetrySlideButton";
+
+function SectionList({
+  sections,
+  titleFor,
+}: {
+  sections: GuideSection[];
+  titleFor: (section: GuideSection) => string;
+}) {
+  return (
+    <>
+      {sections.map((section, i) => (
+        <div key={`${section.type}-${i}`}>
+          <h3>{titleFor(section)}</h3>
+          {section.content && <ReactMarkdown>{section.content}</ReactMarkdown>}
+          {section.items && (
+            <ul>
+              {section.items.map((item, j) => (
+                <li key={j}>
+                  {item.question !== "bullet" && <strong>{item.question}: </strong>}
+                  <ReactMarkdown>{item.answer}</ReactMarkdown>
+                </li>
+              ))}
+            </ul>
+          )}
+          {section.keyPoints && section.keyPoints.length > 0 && (
+            <>
+              {section.type === "trainerPointer" && <h4>Key Points</h4>}
+              <ul>
+                {section.keyPoints.map((point, j) => (
+                  <li key={j}>{point}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
 
 export function SlideCard({
   id,
@@ -9,6 +48,7 @@ export function SlideCard({
   imagePath,
   status,
   sections,
+  sgSections,
   slideTitle,
 }: {
   id: string;
@@ -16,6 +56,7 @@ export function SlideCard({
   imagePath: string;
   status: string;
   sections: GuideSection[];
+  sgSections?: GuideSection[];
   slideTitle?: string | null;
 }) {
   return (
@@ -30,32 +71,18 @@ export function SlideCard({
           </div>
         </>
       )}
-      {sections.map((section) => (
-        <div key={section.type}>
-          <h3>{sectionDisplayTitle(section)}</h3>
-          {section.content && <ReactMarkdown>{section.content}</ReactMarkdown>}
-          {section.items && (
-            <ul>
-              {section.items.map((item, i) => (
-                <li key={i}>
-                  {item.question !== "bullet" && <strong>{item.question}: </strong>}
-                  <ReactMarkdown>{item.answer}</ReactMarkdown>
-                </li>
-              ))}
-            </ul>
-          )}
-          {section.keyPoints && section.keyPoints.length > 0 && (
-            <>
-              <h4>Key Points</h4>
-              <ul>
-                {section.keyPoints.map((point, i) => (
-                  <li key={i}>{point}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </div>
-      ))}
+      {sections.length > 0 && (
+        <>
+          <h3>Instructor Guide</h3>
+          <SectionList sections={sections} titleFor={sectionDisplayTitle} />
+        </>
+      )}
+      {sgSections && sgSections.length > 0 && (
+        <>
+          <h3>Student Guide</h3>
+          <SectionList sections={sgSections} titleFor={sgSectionDisplayTitle} />
+        </>
+      )}
     </section>
   );
 }
