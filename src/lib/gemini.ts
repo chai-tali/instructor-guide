@@ -299,7 +299,15 @@ export async function generateStudentGuide(
 
   const parsed = JSON.parse(result.response.text());
   const guide = studentGuideSchema.parse(parsed);
-  return { sections: guide.sections.map(sanitizeSection) };
+  const sections = guide.sections.map(sanitizeSection);
+
+  // Non-teaching slides must get ONLY coreExplanation. The prompt asks for this,
+  // but Gemini sometimes still attaches rememberThis/mentalModel anyway; enforce
+  // it deterministically rather than trust the model.
+  const filtered =
+    contentMode === null ? sections.filter((section) => section.type === "coreExplanation") : sections;
+
+  return { sections: filtered };
 }
 
 const DECK_ANALYZER_PROMPT = `You are an expert Instructional Designer.

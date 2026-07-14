@@ -366,6 +366,25 @@ describe("generateStudentGuide", () => {
     expect(result.sections[0].type).toBe("coreExplanation");
   });
 
+  it("discards extra sections the model returns for a non-teaching slide, keeping only coreExplanation", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              { type: "coreExplanation", title: "Concept Explanation", content: "This slide welcomes participants." },
+              { type: "rememberThis", title: "Remember This", keyPoints: ["This should not survive."] },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateStudentGuide("base64image", "text", "WELCOME", null);
+
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].type).toBe("coreExplanation");
+  });
+
   it("strips em dashes from content and keyPoints", async () => {
     generateContentMock.mockResolvedValue({
       response: {
