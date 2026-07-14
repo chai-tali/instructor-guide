@@ -82,3 +82,54 @@ export interface DeckAnalysis {
   duration: string | null;
   learningObjectives: string[];
 }
+
+export const CONTENT_MODES = ["TEXTUAL", "VISUAL"] as const;
+export type ContentMode = (typeof CONTENT_MODES)[number];
+
+export const GUIDE_TYPES = ["ig", "sg"] as const;
+export type GuideType = (typeof GUIDE_TYPES)[number];
+
+export const NON_TEACHING_INTENTS: SlideIntent[] = [
+  "WELCOME",
+  "AGENDA",
+  "SECTION_DIVIDER",
+  "THANK_YOU",
+];
+
+export const SG_SECTION_KEYS = [
+  "coreExplanation",
+  "rememberThis",
+  "mentalModel",
+  "selfProbingQuestions",
+] as const;
+export type SgSectionKey = (typeof SG_SECTION_KEYS)[number];
+
+export interface StudentGuide {
+  sections: GuideSection[];
+}
+
+export const SG_SECTION_TITLES: Record<string, string> = {
+  coreExplanation: "Core Explanation",
+  rememberThis: "Remember This",
+  mentalModel: "Mental Model",
+  selfProbingQuestions: "Self-Probing Questions",
+};
+
+export function sgSectionDisplayTitle(section: Pick<GuideSection, "type" | "title">): string {
+  if (section.type === "coreExplanation") {
+    return section.title || SG_SECTION_TITLES.coreExplanation;
+  }
+  return SG_SECTION_TITLES[section.type] || section.title || section.type;
+}
+
+export function parseGuideTypes(raw: string | null | undefined): GuideType[] {
+  if (!raw) return ["ig"];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return ["ig"];
+    const valid = parsed.filter((v): v is GuideType => (GUIDE_TYPES as readonly string[]).includes(v));
+    return valid.length > 0 ? valid : ["ig"];
+  } catch {
+    return ["ig"];
+  }
+}
