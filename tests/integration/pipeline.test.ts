@@ -36,7 +36,7 @@ vi.mock("@/lib/gemini", () => ({
   classifyContentMode: vi.fn().mockResolvedValue("TEXTUAL"),
   generateStudentGuide: vi.fn().mockImplementation(async (_img: string, _text: string, _intent: string, contentMode: string | null) => ({
     sections:
-      _intent === "THANK_YOU"
+      contentMode === null
         ? [{ type: "coreExplanation", title: "Concept Explanation", content: "SG content" }]
         : [
             { type: "coreExplanation", title: "Concept Explanation", content: "SG content" },
@@ -122,9 +122,9 @@ describe("full pipeline", () => {
     const slides = await db.slide.findMany({ where: { jobId: job.id }, orderBy: { index: "asc" } });
     expect(slides).toHaveLength(3);
     expect(slides[0].sections).toBeNull();
+    // slides[0] is the WELCOME slide -> non-teaching -> coreExplanation only
     expect(JSON.parse(slides[0].sgSections!)).toEqual([
       { type: "coreExplanation", title: "Concept Explanation", content: "SG content" },
-      { type: "rememberThis", title: "Remember This", keyPoints: ["Point one."] },
     ]);
     // slides[2] is the THANK_YOU slide -> non-teaching -> coreExplanation only
     expect(JSON.parse(slides[2].sgSections!)).toEqual([

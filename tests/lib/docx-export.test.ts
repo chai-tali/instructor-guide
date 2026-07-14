@@ -201,6 +201,25 @@ describe("buildInstructorGuideDocx front matter", () => {
     expect(xml).not.toContain("Key Points");
   });
 
+  it("renders keyPoints bullets without a Key Points heading for a non-trainerPointer section", async () => {
+    const buffer = await buildInstructorGuideDocx(fakeJob(), [
+      fakeSlide({
+        sections: JSON.stringify([
+          {
+            type: "mentalModel",
+            title: "Mental Model",
+            content: "Think of it like a filing system.",
+            keyPoints: ["Folders group related items.", "Labels make retrieval fast."],
+          },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).not.toContain("Key Points");
+    expect(xml).toContain("Folders group related items.");
+    expect(xml).toContain("Labels make retrieval fast.");
+  });
+
   it("renders the Relevance of the Slide heading for a howThisFits section", async () => {
     const buffer = await buildInstructorGuideDocx(fakeJob(), [
       fakeSlide({

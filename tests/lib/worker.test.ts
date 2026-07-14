@@ -38,6 +38,11 @@ describe("processJob", () => {
     vi.mocked(analyzeDeck).mockReset();
     vi.mocked(classifyContentMode).mockReset();
     vi.mocked(generateStudentGuide).mockReset();
+    vi.mocked(analyzeDeck).mockResolvedValue({
+      workshopTitle: null,
+      duration: null,
+      learningObjectives: [],
+    });
   });
 
   afterAll(async () => {
