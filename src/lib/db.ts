@@ -22,6 +22,7 @@ export interface JobRow {
   workshopTitle: string | null;
   duration: string | null;
   learningObjectives: string | null;
+  guideTypes: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,8 @@ export interface SlideRow {
   recommendedSections: string | null;
   confidence: number | null;
   sections: string | null;
+  contentMode: string | null;
+  sgSections: string | null;
   slideTitle: string | null;
   status: string;
   error: string | null;
@@ -75,13 +78,21 @@ export const db = {
       status?: string;
       totalSlides?: number | null;
       completedSlides?: number;
+      guideTypes?: string;
     }): Promise<JobRow> {
       const id = randomUUID();
       const result = await pool.query<JobRow>(
-        `INSERT INTO "Job" (id, filename, status, "totalSlides", "completedSlides")
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO "Job" (id, filename, status, "totalSlides", "completedSlides", "guideTypes")
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [id, data.filename, data.status ?? "pending", data.totalSlides ?? null, data.completedSlides ?? 0]
+        [
+          id,
+          data.filename,
+          data.status ?? "pending",
+          data.totalSlides ?? null,
+          data.completedSlides ?? 0,
+          data.guideTypes ?? '["ig"]',
+        ]
       );
       return result.rows[0];
     },
@@ -126,14 +137,16 @@ export const db = {
       recommendedSections?: string | null;
       confidence?: number | null;
       sections?: string | null;
+      contentMode?: string | null;
+      sgSections?: string | null;
       status?: string;
       error?: string | null;
     }): Promise<SlideRow> {
       const id = randomUUID();
       const result = await pool.query<SlideRow>(
         `INSERT INTO "Slide"
-           (id, "jobId", "index", "imagePath", "extractedText", "slideIntent", "recommendedSections", confidence, sections, status, error)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+           (id, "jobId", "index", "imagePath", "extractedText", "slideIntent", "recommendedSections", confidence, sections, "contentMode", "sgSections", status, error)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
          RETURNING *`,
         [
           id,
@@ -145,6 +158,8 @@ export const db = {
           data.recommendedSections ?? null,
           data.confidence ?? null,
           data.sections ?? null,
+          data.contentMode ?? null,
+          data.sgSections ?? null,
           data.status ?? "pending",
           data.error ?? null,
         ]

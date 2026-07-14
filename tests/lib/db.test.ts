@@ -29,3 +29,59 @@ describe("db.job workshop fields", () => {
     expect(JSON.parse(updated.learningObjectives!)).toEqual(["Understand X", "Apply Y"]);
   });
 });
+
+describe("db.job guideTypes", () => {
+  afterAll(async () => {
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
+  });
+
+  it("defaults guideTypes to '[\"ig\"]' on create when omitted", async () => {
+    const job = await db.job.create({ filename: "deck.pptx" });
+    expect(job.guideTypes).toBe('["ig"]');
+  });
+
+  it("accepts an explicit guideTypes value on create", async () => {
+    const job = await db.job.create({ filename: "deck.pptx", guideTypes: '["ig","sg"]' });
+    expect(job.guideTypes).toBe('["ig","sg"]');
+  });
+});
+
+describe("db.slide contentMode and sgSections", () => {
+  afterAll(async () => {
+    await db.slide.deleteMany();
+    await db.job.deleteMany();
+  });
+
+  it("defaults contentMode and sgSections to null on create", async () => {
+    const job = await db.job.create({ filename: "deck.pptx" });
+    const slide = await db.slide.create({
+      jobId: job.id,
+      index: 0,
+      imagePath: "/tmp/1.png",
+      extractedText: "text",
+    });
+    expect(slide.contentMode).toBeNull();
+    expect(slide.sgSections).toBeNull();
+  });
+
+  it("round-trips contentMode and sgSections through create and update", async () => {
+    const job = await db.job.create({ filename: "deck.pptx" });
+    const slide = await db.slide.create({
+      jobId: job.id,
+      index: 0,
+      imagePath: "/tmp/1.png",
+      extractedText: "text",
+      contentMode: "VISUAL",
+      sgSections: JSON.stringify([{ type: "coreExplanation", title: "Visual Walkthrough" }]),
+    });
+    expect(slide.contentMode).toBe("VISUAL");
+    expect(JSON.parse(slide.sgSections!)).toEqual([{ type: "coreExplanation", title: "Visual Walkthrough" }]);
+
+    const updated = await db.slide.update({
+      where: { id: slide.id },
+      data: { contentMode: "TEXTUAL" },
+    });
+    expect(updated.contentMode).toBe("TEXTUAL");
+  });
+});
