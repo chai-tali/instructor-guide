@@ -1,7 +1,13 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { z } from "zod";
 import type { Schema } from "@google/generative-ai";
-import { slideAnalysisSchema, instructorGuideSchema, contentModeSchema, studentGuideSchema } from "@/lib/schemas";
+import {
+  slideAnalysisSchema,
+  instructorGuideSchema,
+  contentModeSchema,
+  sgTeachingResponseSchema,
+  sgNonTeachingResponseSchema,
+} from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
 import type {
   SlideAnalysis,
@@ -258,21 +264,66 @@ export async function generateGuide(
   return { sections: guide.sections.map(sanitizeSection) };
 }
 
-const SG_GENERATOR_PROMPT = `You are an expert Instructional Designer writing a Student Guide entry for a learner reading independently (not a trainer script).
+const SG_TEACHING_PROMPT = `You are an expert Instructional Designer writing a Student Guide entry for a learner reading independently (not a trainer script). This is a TEACHING slide.
 
 Every claim you write MUST be grounded in the slide image and the OCR extracted text provided to you. Do not invent facts, numbers, names, or examples that are not shown or implied by the slide. If you are unsure whether something is supported by the slide, leave it out rather than guessing.
 
-Section Rules:
+Fill in every field below:
 
-coreExplanation: If contentMode is TEXTUAL, write a Concept Explanation: a clear paragraph explaining the concept the slide teaches, in the learner's own study voice. If contentMode is VISUAL, write a Visual Walkthrough: explain what the diagram/chart/process/table shows and what it means, walking through its parts in order. Ground every sentence in the slide -- never invent information. If this is a non-teaching slide (no contentMode provided), write one short paragraph explaining what this slide is / why it's here, nothing more.
+coreExplanationTitle: Either "Concept Explanation" (if contentMode is TEXTUAL) or "Visual Walkthrough" (if contentMode is VISUAL).
+
+coreExplanationContent: If contentMode is TEXTUAL, write a Concept Explanation: a clear paragraph explaining the concept the slide teaches, in the learner's own study voice. If contentMode is VISUAL, write a Visual Walkthrough: explain what the diagram/chart/process/table shows and what it means, walking through its parts in order. Ground every sentence in the slide -- never invent information.
 
 rememberThis: Exactly 2-3 crisp bullets capturing the single most important takeaways from this slide. Each bullet is a short, standalone, memorable statement -- not a summary sentence.
 
-mentalModel: One memorable real-life analogy that makes the concept concrete. Only if a natural analogy exists -- do not force one.
+mentalModel: One memorable real-life analogy that makes the concept concrete, only if a natural analogy exists -- do not force one. Omit this field entirely if no natural analogy exists.
 
-selfProbingQuestions: REQUIRED for every teaching slide (whenever contentMode is TEXTUAL or VISUAL) -- you MUST generate exactly 2-3 questions a learner should ask themselves to check their own understanding of this slide. Never omit this section and never return it empty for a teaching slide. Questions only, no answers. Only skip this section entirely for a non-teaching slide (no contentMode provided).
+selfProbingQuestions: Exactly 2-3 questions a learner should ask themselves to check their own understanding of this slide. This field is REQUIRED and must never be empty for a teaching slide. Questions only, no answers.
 
-General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/questions, each one MUST be its own array item -- never merge multiple points into one string. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
+General Rules: Never invent information. Never generate generic filler. Each array MUST contain separate, standalone entries -- never merge multiple points into one string. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
+
+const SG_NON_TEACHING_PROMPT = `You are an expert Instructional Designer writing a Student Guide entry for a learner reading independently (not a trainer script). This is a NON-TEACHING slide (e.g. Welcome, Agenda, Section Divider, Thank You) -- it introduces or closes a section rather than teaching a concept.
+
+Every claim you write MUST be grounded in the slide image and the OCR extracted text provided to you. Do not invent facts, numbers, names, or examples that are not shown or implied by the slide.
+
+Fill in every field below:
+
+coreExplanationTitle: "Concept Explanation".
+
+coreExplanationContent: One short paragraph explaining what this slide is and why it's here. Nothing more -- do not add takeaways, analogies, or questions.
+
+General Rules: Never invent information. Never generate generic filler. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
+
+const sgTeachingResponseGeminiSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    coreExplanationTitle: { type: SchemaType.STRING },
+    coreExplanationContent: { type: SchemaType.STRING },
+    rememberThis: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      minItems: 2,
+      maxItems: 3,
+    },
+    mentalModel: { type: SchemaType.STRING },
+    selfProbingQuestions: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      minItems: 2,
+      maxItems: 3,
+    },
+  },
+  required: ["coreExplanationTitle", "coreExplanationContent", "rememberThis", "selfProbingQuestions"],
+};
+
+const sgNonTeachingResponseGeminiSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    coreExplanationTitle: { type: SchemaType.STRING },
+    coreExplanationContent: { type: SchemaType.STRING },
+  },
+  required: ["coreExplanationTitle", "coreExplanationContent"],
+};
 
 export async function generateStudentGuide(
   imageBase64: string,
@@ -280,34 +331,63 @@ export async function generateStudentGuide(
   slideIntent: SlideIntent,
   contentMode: ContentMode | null
 ): Promise<StudentGuide> {
+  const isTeaching = contentMode !== null;
+
   const model = getClient().getGenerativeModel({
     model: MODEL_NAME,
     generationConfig: {
       responseMimeType: "application/json",
-      responseSchema: generatorResponseSchema,
+      responseSchema: isTeaching ? sgTeachingResponseGeminiSchema : sgNonTeachingResponseGeminiSchema,
     },
   });
 
   const context = JSON.stringify({ slideIntent, contentMode });
 
   const result = await model.generateContent([
-    { text: SG_GENERATOR_PROMPT },
+    { text: isTeaching ? SG_TEACHING_PROMPT : SG_NON_TEACHING_PROMPT },
     { text: `Analysis context:\n${context}` },
     { text: `OCR extracted text:\n${extractedText}` },
     { inlineData: { mimeType: "image/png", data: imageBase64 } },
   ]);
 
   const parsed = JSON.parse(result.response.text());
-  const guide = studentGuideSchema.parse(parsed);
-  const sections = guide.sections.map(sanitizeSection);
 
-  // Non-teaching slides must get ONLY coreExplanation. The prompt asks for this,
-  // but Gemini sometimes still attaches rememberThis/mentalModel anyway; enforce
-  // it deterministically rather than trust the model.
-  const filtered =
-    contentMode === null ? sections.filter((section) => section.type === "coreExplanation") : sections;
+  if (!isTeaching) {
+    const nonTeaching = sgNonTeachingResponseSchema.parse(parsed);
+    return {
+      sections: [
+        sanitizeSection({
+          type: "coreExplanation",
+          title: nonTeaching.coreExplanationTitle,
+          content: nonTeaching.coreExplanationContent,
+        }),
+      ],
+    };
+  }
 
-  return { sections: filtered };
+  const teaching = sgTeachingResponseSchema.parse(parsed);
+  const sections: GuideSection[] = [
+    {
+      type: "coreExplanation",
+      title: teaching.coreExplanationTitle,
+      content: teaching.coreExplanationContent,
+    },
+    {
+      type: "rememberThis",
+      title: "Remember This",
+      keyPoints: teaching.rememberThis,
+    },
+    ...(teaching.mentalModel
+      ? [{ type: "mentalModel", title: "Mental Model", content: teaching.mentalModel }]
+      : []),
+    {
+      type: "selfProbingQuestions",
+      title: "Self-Probing Questions",
+      keyPoints: teaching.selfProbingQuestions,
+    },
+  ];
+
+  return { sections: sections.map(sanitizeSection) };
 }
 
 const DECK_ANALYZER_PROMPT = `You are an expert Instructional Designer.

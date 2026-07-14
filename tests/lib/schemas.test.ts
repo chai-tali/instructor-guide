@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema, contentModeSchema, studentGuideSchema } from "@/lib/schemas";
+import {
+  slideAnalysisSchema,
+  instructorGuideSchema,
+  deckAnalysisSchema,
+  contentModeSchema,
+  studentGuideSchema,
+  sgTeachingResponseSchema,
+  sgNonTeachingResponseSchema,
+} from "@/lib/schemas";
 
 describe("slideAnalysisSchema", () => {
   it("accepts a valid analysis payload", () => {
@@ -173,5 +181,75 @@ describe("studentGuideSchema", () => {
 
   it("rejects a section missing required fields", () => {
     expect(() => studentGuideSchema.parse({ sections: [{ title: "Missing type" }] })).toThrow();
+  });
+});
+
+describe("sgTeachingResponseSchema", () => {
+  it("accepts a full teaching-slide payload with a mental model", () => {
+    const result = sgTeachingResponseSchema.parse({
+      coreExplanationTitle: "Concept Explanation",
+      coreExplanationContent: "CAP is about trade-offs.",
+      rememberThis: ["Partition tolerance is non-negotiable.", "CP and AP systems make different choices."],
+      mentalModel: "Think of it like a seesaw.",
+      selfProbingQuestions: ["Why must you choose?", "What happens during a partition?"],
+    });
+    expect(result.selfProbingQuestions).toHaveLength(2);
+  });
+
+  it("accepts a teaching-slide payload without mentalModel (optional)", () => {
+    const result = sgTeachingResponseSchema.parse({
+      coreExplanationTitle: "Concept Explanation",
+      coreExplanationContent: "Some concept.",
+      rememberThis: ["Point one.", "Point two."],
+      selfProbingQuestions: ["Question one?", "Question two?"],
+    });
+    expect(result.mentalModel).toBeUndefined();
+  });
+
+  it("rejects a payload missing selfProbingQuestions", () => {
+    expect(() =>
+      sgTeachingResponseSchema.parse({
+        coreExplanationTitle: "Concept Explanation",
+        coreExplanationContent: "Some concept.",
+        rememberThis: ["Point one.", "Point two."],
+      })
+    ).toThrow();
+  });
+
+  it("rejects a payload with an empty selfProbingQuestions array", () => {
+    expect(() =>
+      sgTeachingResponseSchema.parse({
+        coreExplanationTitle: "Concept Explanation",
+        coreExplanationContent: "Some concept.",
+        rememberThis: ["Point one.", "Point two."],
+        selfProbingQuestions: [],
+      })
+    ).toThrow();
+  });
+
+  it("rejects a payload missing rememberThis", () => {
+    expect(() =>
+      sgTeachingResponseSchema.parse({
+        coreExplanationTitle: "Concept Explanation",
+        coreExplanationContent: "Some concept.",
+        selfProbingQuestions: ["Question one?", "Question two?"],
+      })
+    ).toThrow();
+  });
+});
+
+describe("sgNonTeachingResponseSchema", () => {
+  it("accepts a coreExplanation-only payload", () => {
+    const result = sgNonTeachingResponseSchema.parse({
+      coreExplanationTitle: "Concept Explanation",
+      coreExplanationContent: "This slide closes the session.",
+    });
+    expect(result.coreExplanationContent).toBe("This slide closes the session.");
+  });
+
+  it("rejects a payload missing coreExplanationContent", () => {
+    expect(() =>
+      sgNonTeachingResponseSchema.parse({ coreExplanationTitle: "Concept Explanation" })
+    ).toThrow();
   });
 });

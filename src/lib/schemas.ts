@@ -38,3 +38,20 @@ export const contentModeSchema = z.object({
 export const studentGuideSchema = z.object({
   sections: z.array(guideSectionSchema),
 });
+
+// Raw Gemini response shape for a teaching-mode SG slide. selfProbingQuestions
+// and rememberThis are required at the schema level (not just requested in the
+// prompt) so Gemini's structured output mode cannot omit them the way it could
+// when they were optional entries in a generic sections array.
+export const sgTeachingResponseSchema = z.object({
+  coreExplanationTitle: z.string(),
+  coreExplanationContent: z.string(),
+  rememberThis: z.array(z.string()).min(2).max(3),
+  mentalModel: z.string().optional(),
+  selfProbingQuestions: z.array(z.string()).min(2).max(3),
+});
+
+export const sgNonTeachingResponseSchema = z.object({
+  coreExplanationTitle: z.string(),
+  coreExplanationContent: z.string(),
+});

@@ -327,12 +327,11 @@ describe("generateStudentGuide", () => {
       response: {
         text: () =>
           JSON.stringify({
-            sections: [
-              { type: "coreExplanation", title: "Concept Explanation", content: "A structured prompt gives clear instructions." },
-              { type: "rememberThis", title: "Remember This", keyPoints: ["Every prompt starts with a role.", "Constraints reduce hallucinations."] },
-              { type: "mentalModel", title: "Mental Model", content: "Think of it like a project brief." },
-              { type: "selfProbingQuestions", title: "Self-Probing Questions", keyPoints: ["Why define the AI's role?", "What happens without constraints?"] },
-            ],
+            coreExplanationTitle: "Concept Explanation",
+            coreExplanationContent: "A structured prompt gives clear instructions.",
+            rememberThis: ["Every prompt starts with a role.", "Constraints reduce hallucinations."],
+            mentalModel: "Think of it like a project brief.",
+            selfProbingQuestions: ["Why define the AI's role?", "What happens without constraints?"],
           }),
       },
     });
@@ -346,6 +345,25 @@ describe("generateStudentGuide", () => {
       "mentalModel",
       "selfProbingQuestions",
     ]);
+    expect(result.sections[3].keyPoints).toEqual(["Why define the AI's role?", "What happens without constraints?"]);
+  });
+
+  it("parses a 3-section response for a teaching slide with no natural analogy (mentalModel omitted)", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            coreExplanationTitle: "Visual Walkthrough",
+            coreExplanationContent: "The chart shows adoption by function.",
+            rememberThis: ["Point one.", "Point two."],
+            selfProbingQuestions: ["Question one?", "Question two?"],
+          }),
+      },
+    });
+
+    const result = await generateStudentGuide("base64image", "text", "ARCHITECTURE", "VISUAL");
+
+    expect(result.sections.map((s) => s.type)).toEqual(["coreExplanation", "rememberThis", "selfProbingQuestions"]);
   });
 
   it("parses a coreExplanation-only response for a non-teaching slide", async () => {
@@ -353,9 +371,8 @@ describe("generateStudentGuide", () => {
       response: {
         text: () =>
           JSON.stringify({
-            sections: [
-              { type: "coreExplanation", title: "Concept Explanation", content: "This slide thanks participants for attending." },
-            ],
+            coreExplanationTitle: "Concept Explanation",
+            coreExplanationContent: "This slide thanks participants for attending.",
           }),
       },
     });
@@ -366,34 +383,15 @@ describe("generateStudentGuide", () => {
     expect(result.sections[0].type).toBe("coreExplanation");
   });
 
-  it("discards extra sections the model returns for a non-teaching slide, keeping only coreExplanation", async () => {
-    generateContentMock.mockResolvedValue({
-      response: {
-        text: () =>
-          JSON.stringify({
-            sections: [
-              { type: "coreExplanation", title: "Concept Explanation", content: "This slide welcomes participants." },
-              { type: "rememberThis", title: "Remember This", keyPoints: ["This should not survive."] },
-            ],
-          }),
-      },
-    });
-
-    const result = await generateStudentGuide("base64image", "text", "WELCOME", null);
-
-    expect(result.sections).toHaveLength(1);
-    expect(result.sections[0].type).toBe("coreExplanation");
-  });
-
   it("strips em dashes from content and keyPoints", async () => {
     generateContentMock.mockResolvedValue({
       response: {
         text: () =>
           JSON.stringify({
-            sections: [
-              { type: "coreExplanation", title: "Concept Explanation", content: "It works like this—clearly." },
-              { type: "rememberThis", title: "Remember This", keyPoints: ["Point one—matters.", "Point two—also matters."] },
-            ],
+            coreExplanationTitle: "Concept Explanation",
+            coreExplanationContent: "It works like this—clearly.",
+            rememberThis: ["Point one—matters.", "Point two—also matters."],
+            selfProbingQuestions: ["Why—this order?", "What—happens next?"],
           }),
       },
     });
@@ -404,9 +402,24 @@ describe("generateStudentGuide", () => {
     expect(result.sections[1].keyPoints).toEqual(["Point one, matters.", "Point two, also matters."]);
   });
 
+  it("throws when a teaching-slide response is missing selfProbingQuestions", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            coreExplanationTitle: "Concept Explanation",
+            coreExplanationContent: "Some concept.",
+            rememberThis: ["Point one.", "Point two."],
+          }),
+      },
+    });
+
+    await expect(generateStudentGuide("base64image", "text", "CONCEPT", "TEXTUAL")).rejects.toThrow();
+  });
+
   it("throws when the response does not match the schema", async () => {
     generateContentMock.mockResolvedValue({
-      response: { text: () => JSON.stringify({ sections: [{ title: "Missing type" }] }) },
+      response: { text: () => JSON.stringify({ coreExplanationTitle: "Concept Explanation" }) },
     });
 
     await expect(generateStudentGuide("base64image", "text", "CONCEPT", "TEXTUAL")).rejects.toThrow();
