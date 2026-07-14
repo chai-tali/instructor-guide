@@ -4,8 +4,9 @@ import fs from "node:fs/promises";
 import { db } from "@/lib/db";
 import { convertPptxToSlideImages } from "@/lib/conversion";
 import { extractSlideTexts } from "@/lib/extraction";
-import { analyzeSlide, generateGuide, analyzeDeck } from "@/lib/gemini";
+import { analyzeSlide, generateGuide, analyzeDeck, classifyContentMode, generateStudentGuide } from "@/lib/gemini";
 import { getStorageDir } from "@/lib/storage";
+import { parseGuideTypes, NON_TEACHING_INTENTS } from "@/types/guide";
 import type { SlideIntent, SectionKey } from "@/types/guide";
 
 const jobQueue: string[] = [];
@@ -83,6 +84,8 @@ export async function processJob(jobId: string): Promise<void> {
 
 export async function processSlide(slideId: string, jobId: string): Promise<void> {
   const slide = await db.slide.findUniqueOrThrow({ where: { id: slideId } });
+  const job = await db.job.findUniqueOrThrow({ where: { id: jobId } });
+  const guideTypes = parseGuideTypes(job.guideTypes);
   const isFirstAttempt = slide.status === "pending";
 
   try {
@@ -90,24 +93,41 @@ export async function processSlide(slideId: string, jobId: string): Promise<void
 
     const imageBase64 = (await fs.readFile(slide.imagePath)).toString("base64");
     const analysis = await analyzeSlide(imageBase64, slide.extractedText);
-    const guide = await generateGuide(
-      imageBase64,
-      slide.extractedText,
-      analysis.slideIntent as SlideIntent,
-      analysis.recommendedSections as SectionKey[]
-    );
 
-    await db.slide.update({
-      where: { id: slideId },
-      data: {
-        slideIntent: analysis.slideIntent,
-        recommendedSections: JSON.stringify(analysis.recommendedSections),
-        confidence: analysis.confidence,
-        sections: JSON.stringify(guide.sections),
-        slideTitle: analysis.slideTitle,
-        status: "done",
-      },
-    });
+    const updateData: Record<string, unknown> = {
+      slideIntent: analysis.slideIntent,
+      slideTitle: analysis.slideTitle,
+      status: "done",
+    };
+
+    if (guideTypes.includes("ig")) {
+      const guide = await generateGuide(
+        imageBase64,
+        slide.extractedText,
+        analysis.slideIntent as SlideIntent,
+        analysis.recommendedSections as SectionKey[]
+      );
+      updateData.recommendedSections = JSON.stringify(analysis.recommendedSections);
+      updateData.confidence = analysis.confidence;
+      updateData.sections = JSON.stringify(guide.sections);
+    }
+
+    if (guideTypes.includes("sg")) {
+      const isTeaching = !NON_TEACHING_INTENTS.includes(analysis.slideIntent as SlideIntent);
+      const contentMode = isTeaching
+        ? await classifyContentMode(imageBase64, slide.extractedText)
+        : null;
+      const studentGuide = await generateStudentGuide(
+        imageBase64,
+        slide.extractedText,
+        analysis.slideIntent as SlideIntent,
+        contentMode
+      );
+      updateData.contentMode = contentMode;
+      updateData.sgSections = JSON.stringify(studentGuide.sections);
+    }
+
+    await db.slide.update({ where: { id: slideId }, data: updateData });
   } catch (err) {
     await db.slide.update({
       where: { id: slideId },
