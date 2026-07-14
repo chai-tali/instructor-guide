@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema, deckAnalysisSchema, contentModeSchema, studentGuideSchema } from "@/lib/schemas";
 
 describe("slideAnalysisSchema", () => {
   it("accepts a valid analysis payload", () => {
@@ -143,5 +143,35 @@ describe("deckAnalysisSchema", () => {
         learningObjectives: ["A", "B", "C", "D", "E", "F"],
       })
     ).toThrow();
+  });
+});
+
+describe("contentModeSchema", () => {
+  it("accepts TEXTUAL", () => {
+    expect(contentModeSchema.parse({ contentMode: "TEXTUAL" }).contentMode).toBe("TEXTUAL");
+  });
+
+  it("accepts VISUAL", () => {
+    expect(contentModeSchema.parse({ contentMode: "VISUAL" }).contentMode).toBe("VISUAL");
+  });
+
+  it("rejects an invalid contentMode value", () => {
+    expect(() => contentModeSchema.parse({ contentMode: "SOMETHING_ELSE" })).toThrow();
+  });
+});
+
+describe("studentGuideSchema", () => {
+  it("accepts sections with content or keyPoints", () => {
+    const result = studentGuideSchema.parse({
+      sections: [
+        { type: "coreExplanation", title: "Concept Explanation", content: "It works like this." },
+        { type: "rememberThis", title: "Remember This", keyPoints: ["Point one.", "Point two."] },
+      ],
+    });
+    expect(result.sections).toHaveLength(2);
+  });
+
+  it("rejects a section missing required fields", () => {
+    expect(() => studentGuideSchema.parse({ sections: [{ title: "Missing type" }] })).toThrow();
   });
 });

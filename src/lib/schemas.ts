@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
+import { SLIDE_INTENTS, SECTION_KEYS, CONTENT_MODES } from "@/types/guide";
 
 export const slideAnalysisSchema = z.object({
   slideIntent: z.enum(SLIDE_INTENTS),
@@ -29,4 +29,12 @@ export const deckAnalysisSchema = z.object({
   workshopTitle: z.string().nullable(),
   duration: z.string().nullable(),
   learningObjectives: z.array(z.string()).min(3).max(5),
+});
+
+export const contentModeSchema = z.object({
+  contentMode: z.enum(CONTENT_MODES),
+});
+
+export const studentGuideSchema = z.object({
+  sections: z.array(guideSectionSchema),
 });
