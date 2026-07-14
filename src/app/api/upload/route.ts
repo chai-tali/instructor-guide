@@ -4,6 +4,7 @@ import path from "node:path";
 import { db } from "@/lib/db";
 import { enqueueJob } from "@/lib/worker";
 import { getStorageDir } from "@/lib/storage";
+import { parseGuideTypes } from "@/types/guide";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 
@@ -21,7 +22,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File exceeds 50MB limit" }, { status: 400 });
   }
 
-  const job = await db.job.create({ filename: file.name, status: "pending" });
+  const guideTypesRaw = formData.get("guideTypes");
+  const guideTypes = parseGuideTypes(typeof guideTypesRaw === "string" ? guideTypesRaw : null);
+  const job = await db.job.create({
+    filename: file.name,
+    status: "pending",
+    guideTypes: JSON.stringify(guideTypes),
+  });
 
   const jobDir = path.join(getStorageDir(), job.id);
   await fs.mkdir(jobDir, { recursive: true });
