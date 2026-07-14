@@ -12,7 +12,12 @@ function SectionList({
 }) {
   return (
     <>
-      {sections.map((section, i) => (
+      {sections
+        .filter(
+          (section) =>
+            section.content || section.items || (section.keyPoints && section.keyPoints.length > 0)
+        )
+        .map((section, i) => (
         <div key={`${section.type}-${i}`}>
           <h3>{titleFor(section)}</h3>
           {section.content && <ReactMarkdown>{section.content}</ReactMarkdown>}

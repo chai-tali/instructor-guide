@@ -260,6 +260,8 @@ export async function generateGuide(
 
 const SG_GENERATOR_PROMPT = `You are an expert Instructional Designer writing a Student Guide entry for a learner reading independently (not a trainer script).
 
+Every claim you write MUST be grounded in the slide image and the OCR extracted text provided to you. Do not invent facts, numbers, names, or examples that are not shown or implied by the slide. If you are unsure whether something is supported by the slide, leave it out rather than guessing.
+
 Section Rules:
 
 coreExplanation: If contentMode is TEXTUAL, write a Concept Explanation: a clear paragraph explaining the concept the slide teaches, in the learner's own study voice. If contentMode is VISUAL, write a Visual Walkthrough: explain what the diagram/chart/process/table shows and what it means, walking through its parts in order. Ground every sentence in the slide -- never invent information. If this is a non-teaching slide (no contentMode provided), write one short paragraph explaining what this slide is / why it's here, nothing more.
@@ -268,7 +270,7 @@ rememberThis: Exactly 2-3 crisp bullets capturing the single most important take
 
 mentalModel: One memorable real-life analogy that makes the concept concrete. Only if a natural analogy exists -- do not force one.
 
-selfProbingQuestions: 2-3 questions a learner should ask themselves to check their own understanding of this slide. Questions only, no answers.
+selfProbingQuestions: REQUIRED for every teaching slide (whenever contentMode is TEXTUAL or VISUAL) -- you MUST generate exactly 2-3 questions a learner should ask themselves to check their own understanding of this slide. Never omit this section and never return it empty for a teaching slide. Questions only, no answers. Only skip this section entirely for a non-teaching slide (no contentMode provided).
 
 General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/questions, each one MUST be its own array item -- never merge multiple points into one string. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
 

@@ -387,4 +387,30 @@ describe("buildStudentGuideDocx per-slide sections", () => {
     expect(xml).toContain("Visual Walkthrough");
     expect(xml).toContain("The chart shows adoption by function.");
   });
+
+  it("does not render a Self-Probing Questions heading when the section has no keyPoints", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [
+      fakeSlide({
+        sgSections: JSON.stringify([
+          { type: "coreExplanation", title: "Concept Explanation", content: "CAP is about trade-offs." },
+          { type: "selfProbingQuestions", title: "Self-Probing Questions", keyPoints: [] },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).not.toContain("Self-Probing Questions");
+  });
+
+  it("does not render a Remember This heading when the section has no content or keyPoints", async () => {
+    const buffer = await buildStudentGuideDocx(fakeJob(), [
+      fakeSlide({
+        sgSections: JSON.stringify([
+          { type: "coreExplanation", title: "Concept Explanation", content: "CAP is about trade-offs." },
+          { type: "rememberThis", title: "Remember This" },
+        ]),
+      }),
+    ]);
+    const xml = await documentXmlOf(buffer);
+    expect(xml).not.toContain("Remember This");
+  });
 });

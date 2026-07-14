@@ -164,6 +164,9 @@ async function slideToParagraphs(slide: SlideRow): Promise<Paragraph[]> {
 }
 
 function sgSectionToParagraphs(section: GuideSection): Paragraph[] {
+  const hasKeyPoints = section.keyPoints && section.keyPoints.length > 0;
+  if (!section.content && !hasKeyPoints) return [];
+
   const paragraphs: Paragraph[] = [
     new Paragraph({
       heading: HeadingLevel.HEADING_2,
@@ -175,8 +178,8 @@ function sgSectionToParagraphs(section: GuideSection): Paragraph[] {
     paragraphs.push(...markdownBlocksToParagraphs(parseMarkdownLite(section.content)));
   }
 
-  if (section.keyPoints && section.keyPoints.length > 0) {
-    paragraphs.push(...bulletParagraphs(section.keyPoints));
+  if (hasKeyPoints) {
+    paragraphs.push(...bulletParagraphs(section.keyPoints!));
   }
 
   return paragraphs;
