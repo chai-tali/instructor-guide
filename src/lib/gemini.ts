@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { z } from "zod";
 import type { Schema } from "@google/generative-ai";
-import { slideAnalysisSchema, instructorGuideSchema, contentModeSchema } from "@/lib/schemas";
+import { slideAnalysisSchema, instructorGuideSchema, contentModeSchema, studentGuideSchema } from "@/lib/schemas";
 import { SLIDE_INTENTS, SECTION_KEYS } from "@/types/guide";
 import type {
   SlideAnalysis,
@@ -11,6 +11,7 @@ import type {
   SectionKey,
   DeckAnalysis,
   ContentMode,
+  StudentGuide,
 } from "@/types/guide";
 
 const MODEL_NAME = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
@@ -254,6 +255,48 @@ export async function generateGuide(
 
   const parsed = JSON.parse(result.response.text());
   const guide = instructorGuideSchema.parse(parsed);
+  return { sections: guide.sections.map(sanitizeSection) };
+}
+
+const SG_GENERATOR_PROMPT = `You are an expert Instructional Designer writing a Student Guide entry for a learner reading independently (not a trainer script).
+
+Section Rules:
+
+coreExplanation: If contentMode is TEXTUAL, write a Concept Explanation: a clear paragraph explaining the concept the slide teaches, in the learner's own study voice. If contentMode is VISUAL, write a Visual Walkthrough: explain what the diagram/chart/process/table shows and what it means, walking through its parts in order. Ground every sentence in the slide -- never invent information. If this is a non-teaching slide (no contentMode provided), write one short paragraph explaining what this slide is / why it's here, nothing more.
+
+rememberThis: Exactly 2-3 crisp bullets capturing the single most important takeaways from this slide. Each bullet is a short, standalone, memorable statement -- not a summary sentence.
+
+mentalModel: One memorable real-life analogy that makes the concept concrete. Only if a natural analogy exists -- do not force one.
+
+selfProbingQuestions: 2-3 questions a learner should ask themselves to check their own understanding of this slide. Questions only, no answers.
+
+General Rules: Never invent information. Never generate generic filler. Generate ONLY the requested sections. Whenever a section rule asks for multiple bullets/questions, each one MUST be its own array item -- never merge multiple points into one string. NEVER use an em dash (—) anywhere in any generated text; use a comma, period, or parentheses instead. Return ONLY valid JSON.`;
+
+export async function generateStudentGuide(
+  imageBase64: string,
+  extractedText: string,
+  slideIntent: SlideIntent,
+  contentMode: ContentMode | null
+): Promise<StudentGuide> {
+  const model = getClient().getGenerativeModel({
+    model: MODEL_NAME,
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: generatorResponseSchema,
+    },
+  });
+
+  const context = JSON.stringify({ slideIntent, contentMode });
+
+  const result = await model.generateContent([
+    { text: SG_GENERATOR_PROMPT },
+    { text: `Analysis context:\n${context}` },
+    { text: `OCR extracted text:\n${extractedText}` },
+    { inlineData: { mimeType: "image/png", data: imageBase64 } },
+  ]);
+
+  const parsed = JSON.parse(result.response.text());
+  const guide = studentGuideSchema.parse(parsed);
   return { sections: guide.sections.map(sanitizeSection) };
 }
 

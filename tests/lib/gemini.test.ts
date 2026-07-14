@@ -14,8 +14,8 @@ vi.mock("@google/generative-ai", () => {
 
 process.env.GEMINI_API_KEY = "test-key";
 
-import { analyzeSlide, generateGuide, analyzeDeck, classifyContentMode } from "@/lib/gemini";
-import type { ContentMode } from "@/types/guide";
+import { analyzeSlide, generateGuide, analyzeDeck, classifyContentMode, generateStudentGuide } from "@/lib/gemini";
+import type { ContentMode, StudentGuide } from "@/types/guide";
 
 describe("analyzeSlide", () => {
   beforeEach(() => {
@@ -314,5 +314,82 @@ describe("classifyContentMode", () => {
     });
 
     await expect(classifyContentMode("base64image", "text")).rejects.toThrow();
+  });
+});
+
+describe("generateStudentGuide", () => {
+  beforeEach(() => {
+    generateContentMock.mockReset();
+  });
+
+  it("parses a full 4-section response for a teaching slide", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              { type: "coreExplanation", title: "Concept Explanation", content: "A structured prompt gives clear instructions." },
+              { type: "rememberThis", title: "Remember This", keyPoints: ["Every prompt starts with a role.", "Constraints reduce hallucinations."] },
+              { type: "mentalModel", title: "Mental Model", content: "Think of it like a project brief." },
+              { type: "selfProbingQuestions", title: "Self-Probing Questions", keyPoints: ["Why define the AI's role?", "What happens without constraints?"] },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateStudentGuide("base64image", "text", "CONCEPT", "TEXTUAL");
+
+    expect(result.sections).toHaveLength(4);
+    expect(result.sections.map((s) => s.type)).toEqual([
+      "coreExplanation",
+      "rememberThis",
+      "mentalModel",
+      "selfProbingQuestions",
+    ]);
+  });
+
+  it("parses a coreExplanation-only response for a non-teaching slide", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              { type: "coreExplanation", title: "Concept Explanation", content: "This slide thanks participants for attending." },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateStudentGuide("base64image", "text", "THANK_YOU", null);
+
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].type).toBe("coreExplanation");
+  });
+
+  it("strips em dashes from content and keyPoints", async () => {
+    generateContentMock.mockResolvedValue({
+      response: {
+        text: () =>
+          JSON.stringify({
+            sections: [
+              { type: "coreExplanation", title: "Concept Explanation", content: "It works like this—clearly." },
+              { type: "rememberThis", title: "Remember This", keyPoints: ["Point one—matters.", "Point two—also matters."] },
+            ],
+          }),
+      },
+    });
+
+    const result = await generateStudentGuide("base64image", "text", "CONCEPT", "TEXTUAL");
+
+    expect(result.sections[0].content).toBe("It works like this, clearly.");
+    expect(result.sections[1].keyPoints).toEqual(["Point one, matters.", "Point two, also matters."]);
+  });
+
+  it("throws when the response does not match the schema", async () => {
+    generateContentMock.mockResolvedValue({
+      response: { text: () => JSON.stringify({ sections: [{ title: "Missing type" }] }) },
+    });
+
+    await expect(generateStudentGuide("base64image", "text", "CONCEPT", "TEXTUAL")).rejects.toThrow();
   });
 });
